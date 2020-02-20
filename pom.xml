@@ -123,6 +123,13 @@
 
     <dependencies>
         <dependency>
+            <groupId>org.softevo.oumextractor</groupId>
+            <artifactId>oumextractor</artifactId>
+            <version>1.0</version>
+            <scope>system</scope>
+            <systemPath>${basedir}/lib/oumextractor.jar</systemPath>
+        </dependency>
+        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
