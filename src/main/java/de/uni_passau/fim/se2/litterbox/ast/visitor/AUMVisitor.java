@@ -18,9 +18,16 @@
  */
 package de.uni_passau.fim.se2.litterbox.ast.visitor;
 
+import de.uni_passau.fim.se2.litterbox.ast.model.Program;
+
 /**
  * Visitor used for creating actor usage models of scratch programs.
  */
-public class AUMVisitor {
+public class AUMVisitor implements ScratchVisitor {
 
+    @Override
+    public void visit(Program program) {
+        System.out.println(program.getIdent().getName());
+        //TODO
+    }
 }

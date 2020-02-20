@@ -18,12 +18,22 @@
  */
 package de.uni_passau.fim.se2.litterbox.analytics;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import de.uni_passau.fim.se2.litterbox.ast.ParsingException;
+import de.uni_passau.fim.se2.litterbox.ast.model.Program;
+import de.uni_passau.fim.se2.litterbox.ast.parser.ProgramParser;
+import de.uni_passau.fim.se2.litterbox.ast.visitor.AUMVisitor;
+import org.apache.commons.io.FilenameUtils;
+
+import java.io.File;
 import java.io.IOException;
 import java.util.logging.FileHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.logging.SimpleFormatter;
+
+import static java.util.Objects.requireNonNull;
 
 /**
  * Used for generating actor usage models of scratch programs.
@@ -32,7 +42,7 @@ public class AUMExtractor {
     /**
      * Logger to be used by this class.
      */
-    private final static Logger logger = Logger.getLogger("org.softevo.oumextractor");
+    private final static Logger logger = Logger.getLogger(AUMExtractor.class.getName());
 
     /**
      * Number of projects present.
@@ -49,21 +59,22 @@ public class AUMExtractor {
      */
     private static int scriptsAnalysed = 0;
 
-    static {
+   /* static {
         try {
-            Handler handler = new FileHandler("OUMExtractor.log");
+            Handler handler = new FileHandler("AUMExtractor.log");
             handler.setFormatter(new SimpleFormatter());
             AUMExtractor.logger.addHandler(handler);
-            AUMExtractor.logger.setLevel(Level.OFF);
+            AUMExtractor.logger.setLevel(Level.ALL);
         } catch (IOException e) {
             System.err.println("[ERROR] Couldn't open log file");
         }
-    }
+    }*/
 
     /**
      * Creates new instance of this class.
      */
-    public AUMExtractor() {}
+    public AUMExtractor() {
+    }
 
     /**
      * This method should be called whenever analysis of a new script is
@@ -94,11 +105,38 @@ public class AUMExtractor {
      * Creates actor usage models for the given scratch programs.
      *
      * @param pathToAnalysisFolder Path to the folder containing the scratch
-     *                            programs to analyse.
-     * @param pathToOutputFolder Path to the folder in which the actor usage
-     *                           models are created.
+     *                             programs to analyse.
+     * @param pathToOutputFolder   Path to the folder in which the actor usage
+     *                             models are created.
      */
     public void createActorUsageModels(String pathToAnalysisFolder, String pathToOutputFolder) {
-        //TODO
+        File analysisFolder = new File(pathToAnalysisFolder);
+        if (!analysisFolder.exists()) {
+            logger.severe("Analysis folder does not exist: " + analysisFolder);
+        } else {
+            File outputFolder = new File(pathToOutputFolder);
+            if (!outputFolder.exists()) {
+                logger.info("Creating output folder: " + pathToOutputFolder);
+                if (!outputFolder.mkdirs()) {
+                    logger.severe("Failed to create output folder: " + pathToOutputFolder);
+                }
+            }
+
+            for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
+                ObjectMapper mapper = new ObjectMapper();
+                Program program;
+                if ((FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json")) {
+                    try {
+                        program = ProgramParser.parseProgram(fileEntry.getName(), mapper.readTree(fileEntry));
+                    } catch (ParsingException | IOException e) {
+                        logger.severe("Unable to parse project: " + fileEntry.getAbsolutePath());
+                        continue;
+                    }
+                    AUMVisitor visitor = new AUMVisitor();
+                    program.accept(visitor);
+                    //TODO
+                }
+            }
+        }
     }
 }
