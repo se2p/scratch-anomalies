@@ -93,12 +93,12 @@ public class AUMExtractor {
     /**
      * Creates actor usage models for the given scratch programs.
      *
-     * @param pathToAnalyseFolder Path to the folder containing the scratch
+     * @param pathToAnalysisFolder Path to the folder containing the scratch
      *                            programs to analyse.
      * @param pathToOutputFolder Path to the folder in which the actor usage
      *                           models are created.
      */
-    public void createActorUsageModels(String pathToAnalyseFolder, String pathToOutputFolder) {
+    public void createActorUsageModels(String pathToAnalysisFolder, String pathToOutputFolder) {
         //TODO
     }
 }
