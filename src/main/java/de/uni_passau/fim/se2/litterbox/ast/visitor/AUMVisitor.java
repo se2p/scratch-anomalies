@@ -18,16 +18,74 @@
  */
 package de.uni_passau.fim.se2.litterbox.ast.visitor;
 
+import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
+import de.uni_passau.fim.se2.litterbox.ast.model.Script;
+import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
+import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
+import org.softevo.oumextractor.modelcreator1.model.MethodCall;
+import org.softevo.oumextractor.modelcreator1.model.Model;
+import org.softevo.oumextractor.modelcreator1.model.State;
+
+import java.util.ArrayList;
 
 /**
  * Visitor used for creating actor usage models of scratch programs.
  */
 public class AUMVisitor implements ScratchVisitor {
 
+    /**
+     * The actor usage model created in this visitor.
+     */
+    private Model model;
+
+    /**
+     * The entry state of the model.
+     */
+    private State entryState;
+
+    /**
+     * Creates an actor usage model for this program.
+     *
+     * @param program The program of which the actor usage model is to be created.
+     */
     @Override
     public void visit(Program program) {
         System.out.println(program.getIdent().getName());
+
+        model = new Model();
+        entryState = model.getEntryState();
+        for (ActorDefinition defintion : program.getActorDefinitionList().getDefintions()) {
+            defintion.accept(this);
+        }
+        System.out.println(model);
+        //TODO
+    }
+
+    /**
+     * Visits every script of this actor.
+     *
+     * @param actorDefinition The definition of the actor.
+     */
+    @Override
+    public void visit(ActorDefinition actorDefinition) {
+        for (Script script : actorDefinition.getScripts().getScriptList()) {
+            script.accept(this);
+        }
+    }
+
+    /**
+     * Does the magic. Work in progress. TODO
+     *
+     * @param script A script of an actor. TODO
+     */
+    @Override
+    public void visit(Script script) {
+        Event event = script.getEvent();
+        State state = model.getNewState();
+        MethodCall methodCall = new MethodCall("sprite", event.getUniqueName());
+        InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
+        model.addTransition(entryState, state, transition);
         //TODO
     }
 }
