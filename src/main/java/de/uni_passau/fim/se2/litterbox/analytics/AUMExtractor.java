@@ -61,10 +61,9 @@ public class AUMExtractor {
     }
 
     /**
-     * Creates new instance of this class. It is to be used only internally, in
-     * order to hold values extracted from the command-line.
+     * Creates new instance of this class.
      */
-    private AUMExtractor() {}
+    public AUMExtractor() {}
 
     /**
      * This method should be called whenever analysis of a new script is
@@ -92,22 +91,14 @@ public class AUMExtractor {
     }
 
     /**
-     * Creates models of object usage based on static analysis.
+     * Creates actor usage models for the given scratch programs.
      *
-     * @param args List of command-line arguments
+     * @param pathToAnalyseFolder Path to the folder containing the scratch
+     *                            programs to analyse.
+     * @param pathToOutputFolder Path to the folder in which the actor usage
+     *                           models are created.
      */
-    public static void main(String[] args) {
-        AUMExtractor extractor = new AUMExtractor();
-        extractor.analyse(args);
-    }
-
-    /**
-     * Parses given command-line arguments and sets flags in this instance
-     * accordingly.  Afterwards runs analysis as specified by the command-line.
-     *
-     * @param args List of command-line arguments
-     */
-    private void analyse(String[] args) {
+    public void createActorUsageModels(String pathToAnalyseFolder, String pathToOutputFolder) {
         //TODO
     }
 }
