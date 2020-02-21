@@ -27,11 +27,9 @@ import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.logging.FileHandler;
-import java.util.logging.Handler;
-import java.util.logging.Level;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.logging.Logger;
-import java.util.logging.SimpleFormatter;
 
 import static java.util.Objects.requireNonNull;
 
@@ -121,7 +119,13 @@ public class AUMExtractor {
                     logger.severe("Failed to create output folder: " + pathToOutputFolder);
                 }
             }
-
+            Set<String> programs = new HashSet<>();
+            for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
+                if ((FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json")) {
+                    programs.add(fileEntry.getName());
+                }
+            }
+            AUMVisitor visitor = new AUMVisitor(pathToOutputFolder, programs);
             for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
                 ObjectMapper mapper = new ObjectMapper();
                 Program program;
@@ -132,11 +136,12 @@ public class AUMExtractor {
                         logger.severe("Unable to parse project: " + fileEntry.getAbsolutePath());
                         continue;
                     }
-                    AUMVisitor visitor = new AUMVisitor();
                     program.accept(visitor);
-                    //TODO
+                    visitor.shutdownAnalysis();
                 }
             }
         }
+
+
     }
 }
