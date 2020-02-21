@@ -311,18 +311,6 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     /**
-     * Visits every script of this actor.
-     *
-     * @param actorDefinition The definition of the actor.
-     */
-    @Override
-    public void visit(ActorDefinition actorDefinition) {
-        for (Script script : actorDefinition.getScripts().getScriptList()) {
-            script.accept(this);
-        }
-    }
-
-    /**
      * Does the magic. Work in progress. TODO
      *
      * @param script A script of an actor. TODO
