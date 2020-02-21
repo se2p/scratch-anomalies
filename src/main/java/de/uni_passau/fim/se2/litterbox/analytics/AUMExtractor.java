@@ -137,9 +137,9 @@ public class AUMExtractor {
                         continue;
                     }
                     program.accept(visitor);
-                    visitor.shutdownAnalysis();
                 }
             }
+            visitor.shutdownAnalysis();
         }
 
 

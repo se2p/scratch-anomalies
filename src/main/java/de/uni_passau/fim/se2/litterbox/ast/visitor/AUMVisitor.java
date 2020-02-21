@@ -22,6 +22,7 @@ import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
 import org.softevo.oumextractor.modelcreator1.ModelData;
 import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
 import org.softevo.oumextractor.modelcreator1.model.MethodCall;
@@ -161,6 +162,7 @@ public class AUMVisitor implements ScratchVisitor {
                 objectOutput.writeInt(this.modelsToSerialize.size());
                 for (Model model : this.modelsToSerialize) {
                     //model.minimize(); TODO do I need this
+                    System.out.println(model);
                     objectOutput.writeInt(this.model2id.get(model));
                     objectOutput.writeObject(model);
                 }
@@ -179,20 +181,19 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Called after analysis of a script is done.
      */
-    public void endScriptAnalysis() {
+    public void endScriptAnalysis(Model currentModel) {
         this.modelsCreated++;
         this.model2id.put(currentModel, this.modelsCreated);
         //TODO check whether the following line is correct or not
         this.id2modelData.put(this.modelsCreated, new ModelData(ACTOR, SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
         // TODO whether it is correct to name every class the same here or not. Maybe this is not the right place to do so
-        currentModel = new Model();
     }
 
     /**
      * Serialises the info collected.
      */
     public void shutdownAnalysis() {
-        // serialize models info
+        // serialise models info
         File targetDirectory = new File(this.pathToOutputDir);
         targetDirectory.mkdirs(); //TODO probably unnecessary here
         try {
@@ -208,14 +209,14 @@ public class AUMVisitor implements ScratchVisitor {
             System.exit(0);
         }
 
-        // serialize names of types investigated
+        // serialise names of types investigated
         try {
             String fileName = "typesnames.ser";
             BufferedOutputStream fileOutput = new BufferedOutputStream(
                     new FileOutputStream(new File(targetDirectory, fileName)));
             ObjectOutputStream objectOutput =
                     new ObjectOutputStream(fileOutput);
-            writeTypesNames(objectOutput);
+            writePrograms(objectOutput);
             objectOutput.close();
         } catch (IOException e) {
             e.printStackTrace(System.err);
@@ -262,7 +263,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param out Stream to serialize the types' names to.
      * @throws IOException
      */
-    private void writeTypesNames(ObjectOutputStream out) throws IOException {
+    private void writePrograms(ObjectOutputStream out) throws IOException {
         out.writeInt(this.programs.size());
         for (String program : this.programs) {
             out.writeObject(program);
@@ -288,7 +289,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Called when analysis of a script produces results in an exception.
      */
-    public void rollbackAnalysis() {
+    public void rollbackAnalysis(Model currentModel) {
         this.modelsToSerialize.remove(currentModel);
         this.model2id.remove(currentModel);
         currentModel.clear();
@@ -307,7 +308,6 @@ public class AUMVisitor implements ScratchVisitor {
             defintion.accept(this);
         }
         serialiseModels();
-        //TODO
     }
 
     /**
@@ -317,15 +317,24 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Script script) {
-        currentModel = new Model();
-        State entryState = currentModel.getEntryState();
+        Model currentModel = new Model();
+        State from = currentModel.getEntryState();
         Event event = script.getEvent();
-        State state = currentModel.getNewState();
-        MethodCall methodCall = new MethodCall("sprite", event.getUniqueName());
-        InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
-        currentModel.addTransition(entryState, state, transition);
+        State to = currentModel.getNewState();
+        addTransition(from, to, event.getUniqueName(), currentModel);
+        List<Stmt> stmts = script.getStmtList().getStmts().getListOfStmt();
+        for (Stmt stmt : stmts) {
+            from = to;
+            to = currentModel.getNewState();
+            addTransition(from, to, stmt.getUniqueName(), currentModel);
+        }
         modelsToSerialize.add(currentModel);
-        //TODO
-        endScriptAnalysis();
+        endScriptAnalysis(currentModel);
+    }
+
+    private void addTransition(State from, State to, String uniqueName, Model model) {
+        MethodCall methodCall = new MethodCall("sprite", uniqueName);
+        InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
+        model.addTransition(from, to, transition);
     }
 }
