@@ -130,12 +130,6 @@
             <!--            <systemPath>${basedir}/lib/oumextractor.jar</systemPath>-->
         </dependency>
         <dependency>
-            <groupId>org.softevo.jutil</groupId>
-            <artifactId>jutil</artifactId>
-            <version>1.0</version>
-            <scope>compile</scope>
-        </dependency>
-        <dependency>
             <groupId>com.fasterxml.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
             <version>${jackson.version}</version>
