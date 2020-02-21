@@ -56,6 +56,10 @@ public class AUMVisitor implements ScratchVisitor {
     private final static Logger logger =
             Logger.getLogger(AUMVisitor.class.getName());
 
+    static {
+        AUMVisitor.logger.setLevel(Level.ALL);
+    }
+
     /**
      * Constant used as class name for every actor analysed.
      */
@@ -70,10 +74,6 @@ public class AUMVisitor implements ScratchVisitor {
      * Constant used for naming the models. TODO is that correct at all
      */
     private static final String MODEL = "model";
-
-    static {
-        AUMVisitor.logger.setLevel(Level.ALL);
-    }
 
     /**
      * Directory to store the models into.
