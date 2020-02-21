@@ -23,7 +23,10 @@ import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.ControlStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatForeverStmt;
 import org.softevo.oumextractor.modelcreator1.ModelData;
+import org.softevo.oumextractor.modelcreator1.model.EpsilonTransition;
 import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
 import org.softevo.oumextractor.modelcreator1.model.MethodCall;
 import org.softevo.oumextractor.modelcreator1.model.Model;
@@ -327,7 +330,13 @@ public class AUMVisitor implements ScratchVisitor {
             from = to;
             to = currentModel.getNewState();
             addTransition(from, to, stmt.getUniqueName(), currentModel);
+            if (stmt instanceof RepeatForeverStmt) {
+                //TODO
+            }
         }
+        EpsilonTransition returnTransition = EpsilonTransition.get();
+        State exitState = currentModel.getExitState();
+        currentModel.addTransition(to, exitState, returnTransition);
         modelsToSerialize.add(currentModel);
         endScriptAnalysis(currentModel);
     }
