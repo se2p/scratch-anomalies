@@ -18,13 +18,11 @@
  */
 package de.uni_passau.fim.se2.litterbox.ast.visitor;
 
-import de.uni_passau.fim.se2.litterbox.ast.model.ASTNode;
 import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
-import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.ControlStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfElseStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfThenStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatForeverStmt;
@@ -374,7 +372,7 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     @Override
-    public void visit(RepeatForeverStmt repeatForeverStmt)  {
+    public void visit(RepeatForeverStmt repeatForeverStmt) {
         //TODO
         from = to;
         addTransition(from, repeatForeverStmt.getUniqueName());
@@ -407,7 +405,6 @@ public class AUMVisitor implements ScratchVisitor {
         from = to;
         addTransition(from, untilStmt.getUniqueName());
     }
-
 
     private void addTransition(State from, String uniqueName) {
         MethodCall methodCall = new MethodCall("sprite", uniqueName);
