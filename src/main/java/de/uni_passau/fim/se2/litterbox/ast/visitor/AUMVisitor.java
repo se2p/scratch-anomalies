@@ -46,6 +46,7 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -132,6 +133,12 @@ public class AUMVisitor implements ScratchVisitor {
     //TODO comment
     private State from;
     private State to;
+    private List<State> states = new LinkedList<>();
+
+    private int getId(State state) {
+        String s = state.toString();
+        return Integer.parseInt(s.substring(s.length()-1));
+    }
 
     /**
      * Creates a new instance of this visitor.
@@ -359,6 +366,7 @@ public class AUMVisitor implements ScratchVisitor {
     public void visit(Event event) {
         System.out.println("Event: " + event.getUniqueName());
         from = currentModel.getEntryState();
+        states.add(from);
         addTransition(from, event.getUniqueName());
     }
 
@@ -376,6 +384,11 @@ public class AUMVisitor implements ScratchVisitor {
         //TODO
         from = to;
         addTransition(from, repeatForeverStmt.getUniqueName());
+        int originalFromIndex = getId(from);
+        for (Stmt stmt : repeatForeverStmt.getStmtList().getStmts().getListOfStmt()) {
+            stmt.accept(this);
+        }
+        to = states.get(originalFromIndex);
     }
 
     @Override
@@ -390,13 +403,25 @@ public class AUMVisitor implements ScratchVisitor {
         //TODO
         from = to;
         addTransition(from, ifThenStmt.getUniqueName());
+        int originalFromIndex = getId(from);
+        State originalFrom = from;
+        for (Stmt stmt : ifThenStmt.getThenStmts().getStmts().getListOfStmt()) {
+            stmt.accept(this);
+        }
+        to = states.get(originalFromIndex);
     }
 
     @Override
     public void visit(RepeatTimesStmt repeatTimesStmt) {
         //TODO
         from = to;
+        int originalFromIndex = getId(from);
         addTransition(from, repeatTimesStmt.getUniqueName());
+        State originalFrom = from;
+        for (Stmt stmt : repeatTimesStmt.getStmtList().getStmts().getListOfStmt()) {
+            stmt.accept(this);
+        }
+        to = states.get(originalFromIndex);
     }
 
     @Override
@@ -410,6 +435,7 @@ public class AUMVisitor implements ScratchVisitor {
         MethodCall methodCall = new MethodCall("sprite", uniqueName);
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
         State followUpState = currentModel.getFollowUpState(from, transition);
+        states.add(followUpState);
         to = followUpState;
         currentModel.addTransition(from, followUpState, transition);
     }
