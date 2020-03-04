@@ -18,13 +18,18 @@
  */
 package de.uni_passau.fim.se2.litterbox.ast.visitor;
 
+import de.uni_passau.fim.se2.litterbox.ast.model.ASTNode;
 import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.ControlStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfElseStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfThenStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatForeverStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatTimesStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.UntilStmt;
 import org.softevo.oumextractor.modelcreator1.ModelData;
 import org.softevo.oumextractor.modelcreator1.model.EpsilonTransition;
 import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
@@ -96,6 +101,11 @@ public class AUMVisitor implements ScratchVisitor {
     private final Map<Integer, ModelData> id2modelData;
 
     /**
+     * Mapping model name => model for models of the currently processed method.
+     */
+    private final Map<String, Model> currentModels;
+
+    /**
      * Model of the currently processed script.
      */
     private Model currentModel;
@@ -121,6 +131,10 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private String program;
 
+    //TODO comment
+    private State from;
+    private State to;
+
     /**
      * Creates a new instance of this visitor.
      *
@@ -132,12 +146,14 @@ public class AUMVisitor implements ScratchVisitor {
         this.programs = new HashSet<String>(programs);
         this.id2modelData = new HashMap<Integer, ModelData>();
         this.model2id = new HashMap<Model, Integer>();
+        this.currentModels = new HashMap<String, Model>();
         this.modelsToSerialize = new HashSet<Model>();
         this.modelsCreated = 0;
+        this.currentModel = new Model();
 
-        // empty models dir //TODO do I want this at all
+        // empty models dir
         File destDir = new File(this.pathToOutputDir);
-        destDir.mkdirs(); //TODO I think I already do this before creating the Visitor
+        destDir.mkdirs();
         for (File file : destDir.listFiles()) {
             file.delete();
         }
@@ -187,6 +203,8 @@ public class AUMVisitor implements ScratchVisitor {
     public void endScriptAnalysis(Model currentModel) {
         this.modelsCreated++;
         this.model2id.put(currentModel, this.modelsCreated);
+        this.currentModels.put(MODEL + modelsCreated, currentModel); //TODO this is a quickfix
+        this.modelsToSerialize.add(currentModel); //FIXME quickfix as well
         //TODO check whether the following line is correct or not
         this.id2modelData.put(this.modelsCreated, new ModelData(ACTOR, SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
         // TODO whether it is correct to name every class the same here or not. Maybe this is not the right place to do so
@@ -264,7 +282,8 @@ public class AUMVisitor implements ScratchVisitor {
      * Serializes list of types analyzed by this Analyzer into given stream.
      *
      * @param out Stream to serialize the types' names to.
-     * @throws IOException
+     * @throws IOException Thrown by writeObject in case there are problems
+     *                     with the underlying stream.
      */
     private void writePrograms(ObjectOutputStream out) throws IOException {
         out.writeInt(this.programs.size());
@@ -307,8 +326,10 @@ public class AUMVisitor implements ScratchVisitor {
     public void visit(Program program) {
         this.program = program.getIdent().getName();
         System.out.println(program.getIdent().getName());
-        for (ActorDefinition defintion : program.getActorDefinitionList().getDefintions()) {
-            defintion.accept(this);
+        for (ActorDefinition definition : program.getActorDefinitionList().getDefintions()) {
+            for (Script script : definition.getScripts().getScriptList()) {
+                script.accept(this);
+            }
         }
         serialiseModels();
     }
@@ -320,30 +341,79 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Script script) {
-        Model currentModel = new Model();
-        State from = currentModel.getEntryState();
-        Event event = script.getEvent();
-        State to = currentModel.getNewState();
-        addTransition(from, to, event.getUniqueName(), currentModel);
-        List<Stmt> stmts = script.getStmtList().getStmts().getListOfStmt();
-        for (Stmt stmt : stmts) {
-            from = to;
-            to = currentModel.getNewState();
-            addTransition(from, to, stmt.getUniqueName(), currentModel);
-            if (stmt instanceof RepeatForeverStmt) {
-                //TODO
-            }
+        System.out.println("Script: " + script.getUniqueName());
+        currentModel = new Model();
+        script.getEvent().accept(this);
+        for (Stmt stmt : script.getStmtList().getStmts().getListOfStmt()) {
+            stmt.accept(this);
         }
         EpsilonTransition returnTransition = EpsilonTransition.get();
-        State exitState = currentModel.getExitState();
-        currentModel.addTransition(to, exitState, returnTransition);
-        modelsToSerialize.add(currentModel);
-        endScriptAnalysis(currentModel);
+        from = to;
+        to = currentModel.getExitState();
+        currentModel.addTransition(from, to, returnTransition);
+        Model toAdd = new Model(currentModel);
+        modelsToSerialize.add(toAdd); //FIXME
+        endScriptAnalysis(toAdd);//FIXME
+        currentModel = new Model();
     }
 
-    private void addTransition(State from, State to, String uniqueName, Model model) {
+    @Override
+    public void visit(Event event) {
+        System.out.println("Event: " + event.getUniqueName());
+        from = currentModel.getEntryState();
+        addTransition(from, event.getUniqueName());
+    }
+
+    @Override
+    public void visit(Stmt stmt) {
+        System.out.println("stmt: " + stmt.getUniqueName());
+        System.out.println("from: " + from);
+        System.out.println("to: " + to);
+        from = to;
+        addTransition(from, stmt.getUniqueName());
+    }
+
+    @Override
+    public void visit(RepeatForeverStmt repeatForeverStmt)  {
+        //TODO
+        from = to;
+        addTransition(from, repeatForeverStmt.getUniqueName());
+    }
+
+    @Override
+    public void visit(IfElseStmt ifElseStmt) {
+        //TODO
+        from = to;
+        addTransition(from, ifElseStmt.getUniqueName());
+    }
+
+    @Override
+    public void visit(IfThenStmt ifThenStmt) {
+        //TODO
+        from = to;
+        addTransition(from, ifThenStmt.getUniqueName());
+    }
+
+    @Override
+    public void visit(RepeatTimesStmt repeatTimesStmt) {
+        //TODO
+        from = to;
+        addTransition(from, repeatTimesStmt.getUniqueName());
+    }
+
+    @Override
+    public void visit(UntilStmt untilStmt) {
+        //TODO
+        from = to;
+        addTransition(from, untilStmt.getUniqueName());
+    }
+
+
+    private void addTransition(State from, String uniqueName) {
         MethodCall methodCall = new MethodCall("sprite", uniqueName);
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
-        model.addTransition(from, to, transition);
+        State followUpState = currentModel.getFollowUpState(from, transition);
+        to = followUpState;
+        currentModel.addTransition(from, followUpState, transition);
     }
 }
