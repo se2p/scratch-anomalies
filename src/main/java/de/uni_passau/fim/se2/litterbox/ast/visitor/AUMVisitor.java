@@ -63,10 +63,10 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private final static Logger logger =
             Logger.getLogger(AUMVisitor.class.getName());
-
     static {
         AUMVisitor.logger.setLevel(Level.ALL);
     }
+
 
     /**
      * Constant used as class name for every actor analysed.
@@ -134,8 +134,10 @@ public class AUMVisitor implements ScratchVisitor {
     private State from;
     private State to;
     private List<State> states = new LinkedList<>();
+    private static final String TRUE = "true";
+    private static final String FALSE = "false";
 
-    private int getId(State state) {
+    private int getId(State state) { //TODO comment
         String s = state.toString();
         return Integer.parseInt(s.substring(s.length()-1));
     }
@@ -381,7 +383,6 @@ public class AUMVisitor implements ScratchVisitor {
 
     @Override
     public void visit(RepeatForeverStmt repeatForeverStmt) {
-        //TODO
         from = to;
         addTransition(from, repeatForeverStmt.getUniqueName());
         int originalFromIndex = getId(from);
@@ -393,31 +394,41 @@ public class AUMVisitor implements ScratchVisitor {
 
     @Override
     public void visit(IfElseStmt ifElseStmt) {
-        //TODO
         from = to;
         addTransition(from, ifElseStmt.getUniqueName());
+        from = to;
+        int originalFromIndex = getId(from);
+        addTransition(from, TRUE);
+        for (Stmt stmt : ifElseStmt.getStmtList().getStmts().getListOfStmt()) {
+            stmt.accept(this);
+        }
+        State afterIf = states.get(originalFromIndex - 1);
+        addTransition(afterIf, FALSE);
+        from = states.get(originalFromIndex - 1);
+        for (Stmt stmt : ifElseStmt.getElseStmts().getStmts().getListOfStmt()) {
+            stmt.accept(this);
+        }
+        to = afterIf;
     }
 
     @Override
     public void visit(IfThenStmt ifThenStmt) {
-        //TODO
         from = to;
         addTransition(from, ifThenStmt.getUniqueName());
+        from = to;
+        addTransition(from, TRUE);
         int originalFromIndex = getId(from);
-        State originalFrom = from;
         for (Stmt stmt : ifThenStmt.getThenStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        to = states.get(originalFromIndex);
+        to = states.get(originalFromIndex - 1);
     }
 
     @Override
     public void visit(RepeatTimesStmt repeatTimesStmt) {
-        //TODO
         from = to;
-        int originalFromIndex = getId(from);
         addTransition(from, repeatTimesStmt.getUniqueName());
-        State originalFrom = from;
+        int originalFromIndex = getId(from);
         for (Stmt stmt : repeatTimesStmt.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
@@ -426,9 +437,13 @@ public class AUMVisitor implements ScratchVisitor {
 
     @Override
     public void visit(UntilStmt untilStmt) {
-        //TODO
         from = to;
         addTransition(from, untilStmt.getUniqueName());
+        int originalFromIndex = getId(from);
+        for (Stmt stmt : untilStmt.getStmtList().getStmts().getListOfStmt()) {
+            stmt.accept(this);
+        }
+        to = states.get(originalFromIndex);
     }
 
     private void addTransition(State from, String uniqueName) {
