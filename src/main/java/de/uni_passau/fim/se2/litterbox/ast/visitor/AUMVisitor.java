@@ -63,15 +63,11 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private final static Logger logger =
             Logger.getLogger(AUMVisitor.class.getName());
+
     static {
         AUMVisitor.logger.setLevel(Level.ALL);
     }
 
-
-    /**
-     * Constant used as class name for every actor analysed.
-     */
-    private static final String ACTOR = "actor";
 
     /**
      * Constant used for dummy script naming. TODO find more sophisticated solution
@@ -100,11 +96,6 @@ public class AUMVisitor implements ScratchVisitor {
     private final Map<Integer, ModelData> id2modelData;
 
     /**
-     * Mapping model name => model for models of the currently processed method.
-     */
-    private final Map<String, Model> currentModels;
-
-    /**
      * Model of the currently processed script.
      */
     private Model currentModel;
@@ -130,16 +121,20 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private String program;
 
+
     //TODO comment
+    private String actor;
     private State from;
     private State to;
     private List<State> states = new LinkedList<>();
     private static final String TRUE = "true";
     private static final String FALSE = "false";
+    private static final String SPRITE = "Sprite";
+    private int spriteCount;
 
     private int getId(State state) { //TODO comment
         String s = state.toString();
-        return Integer.parseInt(s.substring(s.length()-1));
+        return Integer.parseInt(s.substring(s.length() - 1));
     }
 
     /**
@@ -153,10 +148,11 @@ public class AUMVisitor implements ScratchVisitor {
         this.programs = new HashSet<String>(programs);
         this.id2modelData = new HashMap<Integer, ModelData>();
         this.model2id = new HashMap<Model, Integer>();
-        this.currentModels = new HashMap<String, Model>();
         this.modelsToSerialize = new HashSet<Model>();
         this.modelsCreated = 0;
         this.currentModel = new Model();
+        this.spriteCount = 0;
+        this.actor = "";
 
         // empty models dir
         File destDir = new File(this.pathToOutputDir);
@@ -207,13 +203,11 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Called after analysis of a script is done.
      */
-    public void endScriptAnalysis(Model currentModel) {
+    public void endScriptAnalysis(Model toAdd) {
         this.modelsCreated++;
-        this.model2id.put(currentModel, this.modelsCreated);
-        this.currentModels.put(MODEL + modelsCreated, currentModel); //TODO this is a quickfix
-        this.modelsToSerialize.add(currentModel); //FIXME quickfix as well
-        //TODO check whether the following line is correct or not
-        this.id2modelData.put(this.modelsCreated, new ModelData(ACTOR, SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
+        this.modelsToSerialize.add(toAdd);
+        this.model2id.put(toAdd, this.modelsCreated);
+        this.id2modelData.put(this.modelsCreated, new ModelData(program + "." + actor + spriteCount, SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
         // TODO whether it is correct to name every class the same here or not. Maybe this is not the right place to do so
     }
 
@@ -319,9 +313,13 @@ public class AUMVisitor implements ScratchVisitor {
      * Called when analysis of a script produces results in an exception.
      */
     public void rollbackAnalysis(Model currentModel) {
+        if (currentModel == null) {
+            this.currentModel = new Model();
+            return;
+        }
         this.modelsToSerialize.remove(currentModel);
         this.model2id.remove(currentModel);
-        currentModel.clear();
+        this.currentModel = new Model();
     }
 
     /**
@@ -332,8 +330,9 @@ public class AUMVisitor implements ScratchVisitor {
     @Override
     public void visit(Program program) {
         this.program = program.getIdent().getName();
-        System.out.println(program.getIdent().getName());
         for (ActorDefinition definition : program.getActorDefinitionList().getDefintions()) {
+            spriteCount++;
+            actor = definition.getIdent().getName();
             for (Script script : definition.getScripts().getScriptList()) {
                 script.accept(this);
             }
@@ -348,7 +347,6 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Script script) {
-        System.out.println("Script: " + script.getUniqueName());
         currentModel = new Model();
         script.getEvent().accept(this);
         for (Stmt stmt : script.getStmtList().getStmts().getListOfStmt()) {
@@ -358,15 +356,12 @@ public class AUMVisitor implements ScratchVisitor {
         from = to;
         to = currentModel.getExitState();
         currentModel.addTransition(from, to, returnTransition);
-        Model toAdd = new Model(currentModel);
-        modelsToSerialize.add(toAdd); //FIXME
-        endScriptAnalysis(toAdd);//FIXME
+        endScriptAnalysis(new Model(currentModel));
         currentModel = new Model();
     }
 
     @Override
     public void visit(Event event) {
-        System.out.println("Event: " + event.getUniqueName());
         from = currentModel.getEntryState();
         states.add(from);
         addTransition(from, event.getUniqueName());
@@ -374,9 +369,6 @@ public class AUMVisitor implements ScratchVisitor {
 
     @Override
     public void visit(Stmt stmt) {
-        System.out.println("stmt: " + stmt.getUniqueName());
-        System.out.println("from: " + from);
-        System.out.println("to: " + to);
         from = to;
         addTransition(from, stmt.getUniqueName());
     }
@@ -447,7 +439,7 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     private void addTransition(State from, String uniqueName) {
-        MethodCall methodCall = new MethodCall("sprite", uniqueName);
+        MethodCall methodCall = new MethodCall(SPRITE + spriteCount, uniqueName);
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
         State followUpState = currentModel.getFollowUpState(from, transition);
         states.add(followUpState);

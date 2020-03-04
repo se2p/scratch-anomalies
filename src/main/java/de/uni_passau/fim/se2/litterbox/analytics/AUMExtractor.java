@@ -19,14 +19,12 @@
 package de.uni_passau.fim.se2.litterbox.analytics;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import de.uni_passau.fim.se2.litterbox.ast.ParsingException;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.parser.ProgramParser;
 import de.uni_passau.fim.se2.litterbox.ast.visitor.AUMVisitor;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
-import java.io.IOException;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -126,6 +124,7 @@ public class AUMExtractor {
                 }
             }
             AUMVisitor visitor = new AUMVisitor(pathToOutputFolder, programs);
+            Set<Exception> exceptions = new HashSet<>();
             for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
                 ObjectMapper mapper = new ObjectMapper();
                 Program program;
@@ -136,10 +135,18 @@ public class AUMExtractor {
                         logger.severe("Unable to parse project: " + fileEntry.getAbsolutePath());
                         continue;
                     }
-                    program.accept(visitor);
+                    try {
+                        program.accept(visitor);
+                    } catch (Exception e) {
+                        exceptions.add(e);
+                        visitor.rollbackAnalysis(null);
+                    }
                 }
             }
             visitor.shutdownAnalysis();
+            for (Exception exception : exceptions) {
+                exception.printStackTrace();
+            }
         }
     }
 }
