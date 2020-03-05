@@ -466,26 +466,37 @@ public class AUMVisitor implements ScratchVisitor {
             listOfStmt.get(i).accept(this);
         }
         this.nextState = repeatState;
-
     }
 
+    /***
+     * Adds a transition for the loop and adds transitions for its statement
+     * list.
+     *
+     * @param repeatTimes The statement causing the transition.
+     */
     @Override
-    public void visit(RepeatTimesStmt repeatTimesStmt) {
-        updatePresentState(nextState);
-        addTransition(presentState, repeatTimesStmt.getUniqueName());
-        int originalFromIndex = getId(presentState);
-        for (Stmt stmt : repeatTimesStmt.getStmtList().getStmts().getListOfStmt()) {
-            stmt.accept(this);
+    public void visit(RepeatTimesStmt repeatTimes) {
+        addTransitionContextAware(repeatTimes.getUniqueName());
+        int repeatStateIndex = getId(nextState);
+        State repeatState = states.get(repeatStateIndex - 1);
+        controlStmtStates.push(repeatState);
+        List<Stmt> listOfStmt = repeatTimes.getStmtList().getStmts().getListOfStmt();
+        int size = listOfStmt.size();
+        for (int i = 0; i < size; i++) {
+            if (i == size - 1) {
+                lastOfList = true;
+            }
+            listOfStmt.get(i).accept(this);
         }
-        nextState = states.get(originalFromIndex);
+        this.nextState = repeatState;
     }
 
     @Override
-    public void visit(UntilStmt untilStmt) {
+    public void visit(UntilStmt until) {
         updatePresentState(nextState);
-        addTransition(presentState, untilStmt.getUniqueName());
+        addTransition(presentState, until.getUniqueName());
         int originalFromIndex = getId(presentState);
-        for (Stmt stmt : untilStmt.getStmtList().getStmts().getListOfStmt()) {
+        for (Stmt stmt : until.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
         nextState = states.get(originalFromIndex);
