@@ -229,6 +229,9 @@ public class AUMVisitor implements ScratchVisitor {
      * Called after analysis of a script is done.
      */
     public void endScriptAnalysis(Model toAdd) {
+        for (int i = 0; i < states.size(); i++) {
+            assert (i + 1 == states.get(i).getId());
+        }
         modelsCreated++;
         modelsToSerialize.add(toAdd);
         model2id.put(toAdd, modelsCreated);
@@ -546,8 +549,6 @@ public class AUMVisitor implements ScratchVisitor {
         EpsilonTransition trueTransition = EpsilonTransition.get();
         currentModel.addTransition(presentState, nextState, trueTransition);
     }
-
-    //TODO add *every* state to the states list every time
 
     /**
      * Adds a transition being aware of the context so that loops back to
