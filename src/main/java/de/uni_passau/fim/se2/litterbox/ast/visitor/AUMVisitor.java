@@ -21,15 +21,14 @@ package de.uni_passau.fim.se2.litterbox.ast.visitor;
 import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
+import de.uni_passau.fim.se2.litterbox.ast.model.StmtList;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
-import de.uni_passau.fim.se2.litterbox.ast.model.event.GreenFlag;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfElseStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfThenStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatForeverStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatTimesStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.UntilStmt;
-import de.uni_passau.fim.se2.litterbox.ast.model.statement.spritemotion.MoveSteps;
 import org.softevo.oumextractor.modelcreator1.ModelData;
 import org.softevo.oumextractor.modelcreator1.model.EpsilonTransition;
 import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
@@ -435,55 +434,47 @@ public class AUMVisitor implements ScratchVisitor {
      * Adds a transition for the loop and adds transitions for its statement
      * list.
      *
-     * @param repeatForever The statement causing the transition.
+     * @param loop The statement causing the transition.
      */
     @Override
-    public void visit(RepeatForeverStmt repeatForever) {
-        addTransitionContextAware(repeatForever.getUniqueName());
-        int repeatStateIndex = getId(nextState);
-        List<Stmt> listOfStmt = repeatForever.getStmtList().getStmts().getListOfStmt();
-        for (Stmt stmt : listOfStmt) {
-            stmt.accept(this);
-        }
-        updatePresentState(nextState);
-        EpsilonTransition transition = EpsilonTransition.get();
-        State repeatState = states.get(repeatStateIndex - 1);
-        currentModel.addTransition(presentState, repeatState, transition);
-        this.nextState = repeatState;
+    public void visit(RepeatForeverStmt loop) {
+        addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
     }
 
     /***
      * Adds a transition for the loop and adds transitions for its statement
      * list.
      *
-     * @param repeatTimes The statement causing the transition.
+     * @param loop The statement causing the transition.
      */
     @Override
-    public void visit(RepeatTimesStmt repeatTimes) {
-        addTransitionContextAware(repeatTimes.getUniqueName());
-        int repeatStateIndex = getId(nextState);
-        List<Stmt> listOfStmt = repeatTimes.getStmtList().getStmts().getListOfStmt();
-        for (Stmt stmt : listOfStmt) {
-            stmt.accept(this);
-        }
-        updatePresentState(nextState);
-        EpsilonTransition transition = EpsilonTransition.get();
-        State repeatState = states.get(repeatStateIndex - 1);
-        currentModel.addTransition(presentState, repeatState, transition);
-        this.nextState = repeatState;
+    public void visit(RepeatTimesStmt loop) {
+        addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
     }
 
     /**
      * Adds a transition for the loop and adds transitions for its statement
      * list.
      *
-     * @param until The statement causing the transition.
+     * @param loop The statement causing the transition.
      */
     @Override
-    public void visit(UntilStmt until) {
-        addTransitionContextAware(until.getUniqueName());
+    public void visit(UntilStmt loop) {
+        addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
+    }
+
+    /**
+     * Updates the actor usage model to contain all transitions related to this
+     * loop, including its contained statements and the epsilon transition at
+     * the end.
+     *
+     * @param stmtName Name of the loop causing this transition.
+     * @param stmtList List of statements contained in this loop.
+     */
+    private void addLoopTransitions(String stmtName, StmtList stmtList) {
+        addTransitionContextAware(stmtName);
         int repeatStateIndex = getId(nextState);
-        List<Stmt> listOfStmt = until.getStmtList().getStmts().getListOfStmt();
+        List<Stmt> listOfStmt = stmtList.getStmts().getListOfStmt();
         for (Stmt stmt : listOfStmt) {
             stmt.accept(this);
         }
