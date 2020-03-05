@@ -470,6 +470,28 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     @Override
+    public void visit(RepeatTimesStmt repeatTimesStmt) {
+        updatePresentState(nextState);
+        addTransition(presentState, repeatTimesStmt.getUniqueName());
+        int originalFromIndex = getId(presentState);
+        for (Stmt stmt : repeatTimesStmt.getStmtList().getStmts().getListOfStmt()) {
+            stmt.accept(this);
+        }
+        nextState = states.get(originalFromIndex);
+    }
+
+    @Override
+    public void visit(UntilStmt untilStmt) {
+        updatePresentState(nextState);
+        addTransition(presentState, untilStmt.getUniqueName());
+        int originalFromIndex = getId(presentState);
+        for (Stmt stmt : untilStmt.getStmtList().getStmts().getListOfStmt()) {
+            stmt.accept(this);
+        }
+        nextState = states.get(originalFromIndex);
+    }
+
+    @Override
     public void visit(IfElseStmt ifElseStmt) {
         updatePresentState(nextState);
         addTransition(presentState, ifElseStmt.getUniqueName());
@@ -499,28 +521,6 @@ public class AUMVisitor implements ScratchVisitor {
             stmt.accept(this);
         }
         nextState = states.get(originalFromIndex - 1);
-    }
-
-    @Override
-    public void visit(RepeatTimesStmt repeatTimesStmt) {
-        updatePresentState(nextState);
-        addTransition(presentState, repeatTimesStmt.getUniqueName());
-        int originalFromIndex = getId(presentState);
-        for (Stmt stmt : repeatTimesStmt.getStmtList().getStmts().getListOfStmt()) {
-            stmt.accept(this);
-        }
-        nextState = states.get(originalFromIndex);
-    }
-
-    @Override
-    public void visit(UntilStmt untilStmt) {
-        updatePresentState(nextState);
-        addTransition(presentState, untilStmt.getUniqueName());
-        int originalFromIndex = getId(presentState);
-        for (Stmt stmt : untilStmt.getStmtList().getStmts().getListOfStmt()) {
-            stmt.accept(this);
-        }
-        nextState = states.get(originalFromIndex);
     }
 
     /**
