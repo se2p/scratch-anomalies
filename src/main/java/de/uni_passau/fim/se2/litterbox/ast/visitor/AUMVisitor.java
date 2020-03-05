@@ -135,7 +135,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Name of the program currently analysed.
      */
-    private String program;
+    private String programName;
 
     /**
      * Name of the current actor the scripts of which are analysed currently.
@@ -171,13 +171,13 @@ public class AUMVisitor implements ScratchVisitor {
     public AUMVisitor(String pathToOutputDir, Set<String> programs) {
         this.pathToOutputDir = pathToOutputDir;
         this.programs = programs;
-        this.id2modelData = new HashMap<Integer, ModelData>();
-        this.model2id = new HashMap<Model, Integer>();
-        this.modelsToSerialize = new HashSet<Model>();
-        this.modelsCreated = 0;
-        this.currentModel = new Model();
-        this.actorsAnalysed = 0;
-        this.currentActorName = "";
+        id2modelData = new HashMap<Integer, ModelData>();
+        model2id = new HashMap<Model, Integer>();
+        modelsToSerialize = new HashSet<Model>();
+        modelsCreated = 0;
+        currentModel = new Model();
+        actorsAnalysed = 0;
+        currentActorName = "";
 
         // empty models dir
         File destDir = new File(this.pathToOutputDir);
@@ -196,21 +196,21 @@ public class AUMVisitor implements ScratchVisitor {
      */
     public void serialiseModels() {
         // serialize models if necessary
-        if (this.modelsToSerialize.size() > 0) {
-            File targetDirectory = new File(this.pathToOutputDir);
+        if (modelsToSerialize.size() > 0) {
+            File targetDirectory = new File(pathToOutputDir);
             try {
-                String fileName = pathToOutputDir + "/" + program + ".models.ser";
+                String fileName = pathToOutputDir + "/" + programName + ".models.ser";
                 File file = new File(fileName);
                 boolean newFile = file.createNewFile();
                 BufferedOutputStream fileOutput = new BufferedOutputStream(
                         new FileOutputStream(new File(fileName), true));
                 ObjectOutputStream objectOutput =
                         new ObjectOutputStream(fileOutput);
-                objectOutput.writeInt(this.modelsToSerialize.size());
-                for (Model model : this.modelsToSerialize) {
+                objectOutput.writeInt(modelsToSerialize.size());
+                for (Model model : modelsToSerialize) {
                     //model.minimize(); TODO do I need this
                     System.out.println(model);
-                    objectOutput.writeInt(this.model2id.get(model));
+                    objectOutput.writeInt(model2id.get(model));
                     objectOutput.writeObject(model);
                 }
                 objectOutput.close();
@@ -221,18 +221,20 @@ public class AUMVisitor implements ScratchVisitor {
         }
 
         // empty the set of models to be serialized
-        this.modelsToSerialize.clear();
-        this.model2id.clear();
+        modelsToSerialize.clear();
+        model2id.clear();
     }
 
     /**
      * Called after analysis of a script is done.
      */
     public void endScriptAnalysis(Model toAdd) {
-        this.modelsCreated++;
-        this.modelsToSerialize.add(toAdd);
-        this.model2id.put(toAdd, this.modelsCreated);
-        this.id2modelData.put(this.modelsCreated, new ModelData(program + "." + currentActorName + actorsAnalysed, SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
+        modelsCreated++;
+        modelsToSerialize.add(toAdd);
+        model2id.put(toAdd, modelsCreated);
+        id2modelData.put(modelsCreated, new ModelData(
+                programName + "." + currentActorName + actorsAnalysed,
+                SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
         // TODO whether it is correct to name every class the same here or not. Maybe this is not the right place to do so
         clear();
     }
@@ -242,11 +244,11 @@ public class AUMVisitor implements ScratchVisitor {
      * script which is analysed.
      */
     private void clear() {
-        this.states.clear();
+        states.clear();
         updatePresentState(null);
-        this.nextState = null;
-        this.currentActorName = "";
-        this.currentModel = new Model();
+        nextState = null;
+        currentActorName = "";
+        currentModel = new Model();
     }
 
     /**
@@ -254,7 +256,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     public void shutdownAnalysis() {
         // serialise models info
-        File targetDirectory = new File(this.pathToOutputDir);
+        File targetDirectory = new File(pathToOutputDir);
         targetDirectory.mkdirs(); //TODO probably unnecessary here
         try {
             String fileName = "modelsdata.ser";
@@ -295,11 +297,11 @@ public class AUMVisitor implements ScratchVisitor {
 
         // fill the index
         List<Integer> ids =
-                new ArrayList<Integer>(this.id2modelData.keySet());
+                new ArrayList<Integer>(id2modelData.keySet());
         System.out.println(ids.size() + " MODELS EXTRACTED");
         Collections.sort(ids);
         for (Integer id : ids) {
-            ModelData modelData = this.id2modelData.get(id);
+            ModelData modelData = id2modelData.get(id);
 
             StringBuffer description = new StringBuffer();
             description.append("INDEX:  ").append(id).append("\n");
@@ -325,9 +327,9 @@ public class AUMVisitor implements ScratchVisitor {
      *                     stream.
      */
     private void writeId2ModelData(ObjectOutputStream out) throws IOException {
-        out.writeInt(this.id2modelData.size());
-        for (Integer id : this.id2modelData.keySet()) {
-            ModelData modelData = this.id2modelData.get(id);
+        out.writeInt(id2modelData.size());
+        for (Integer id : id2modelData.keySet()) {
+            ModelData modelData = id2modelData.get(id);
             out.writeInt(id);
             out.writeObject(modelData);
         }
@@ -341,8 +343,8 @@ public class AUMVisitor implements ScratchVisitor {
      *                     with the underlying stream.
      */
     private void writePrograms(ObjectOutputStream out) throws IOException {
-        out.writeInt(this.programs.size());
-        for (String program : this.programs) {
+        out.writeInt(programs.size());
+        for (String program : programs) {
             out.writeObject(program);
         }
     }
@@ -353,8 +355,8 @@ public class AUMVisitor implements ScratchVisitor {
     public void rollbackAnalysis(Model currentModel) {
         clear();
         if (currentModel != null) {
-            this.modelsToSerialize.remove(currentModel);
-            this.model2id.remove(currentModel);
+            modelsToSerialize.remove(currentModel);
+            model2id.remove(currentModel);
         }
     }
 
@@ -378,7 +380,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Program program) {
-        this.program = program.getIdent().getName();
+        programName = program.getIdent().getName();
         for (ActorDefinition definition : program.getActorDefinitionList().getDefintions()) {
             actorsAnalysed++;
             currentActorName = definition.getIdent().getName();
@@ -482,7 +484,7 @@ public class AUMVisitor implements ScratchVisitor {
         EpsilonTransition transition = EpsilonTransition.get();
         State repeatState = states.get(repeatStateIndex - 1);
         currentModel.addTransition(presentState, repeatState, transition);
-        this.nextState = repeatState;
+        nextState = repeatState;
     }
 
     /**
@@ -536,7 +538,7 @@ public class AUMVisitor implements ScratchVisitor {
         for (Stmt stmt : ifThenStmt.getThenStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        int endOfTrueBranchStateId = getId(nextState); 
+        int endOfTrueBranchStateId = getId(nextState);
         presentState = states.get(afterIfStmtIndex - 1);
         addTransition(presentState, FALSE);
         State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
@@ -546,6 +548,7 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     //TODO add *every* state to the states list every time
+
     /**
      * A workaround to retrieve the id of a state without changing the
      * OUMExtractor source code. TODO introduce a method to the source code.
