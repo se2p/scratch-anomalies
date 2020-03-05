@@ -493,24 +493,31 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(IfElseStmt ifElseStmt) {
-        // add the transition for the if statement itself
         updatePresentState(nextState);
         addTransition(presentState, ifElseStmt.getUniqueName());
-
-        // add a transition todo
+        int afterIfStmtIndex = getId(nextState);
         updatePresentState(nextState);
-        int originalFromIndex = getId(presentState);
         addTransition(presentState, TRUE);
         for (Stmt stmt : ifElseStmt.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        State afterIf = states.get(originalFromIndex - 1);
-        addTransition(afterIf, FALSE);
-        updatePresentState(states.get(originalFromIndex - 1));
+        int endOfTrueBranchStateId = getId(nextState);
+        presentState = states.get(afterIfStmtIndex - 1);
+        addTransition(presentState, FALSE);
         for (Stmt stmt : ifElseStmt.getElseStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        nextState = afterIf;
+        State next = currentModel.getNewState();
+        states.add(next);
+        updatePresentState(nextState);
+        EpsilonTransition falseTransition = EpsilonTransition.get();
+        currentModel.addTransition(presentState, next, falseTransition);
+        State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
+        updatePresentState(endOfTrueBranch);
+        EpsilonTransition trueTransition = EpsilonTransition.get();
+        currentModel.addTransition(presentState, next, trueTransition);
+        updatePresentState(next);
+        nextState = next;
     }
 
     /**
@@ -532,7 +539,6 @@ public class AUMVisitor implements ScratchVisitor {
         int endOfTrueBranchStateId = getId(nextState); 
         presentState = states.get(afterIfStmtIndex - 1);
         addTransition(presentState, FALSE);
-        updatePresentState(nextState);
         State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
         updatePresentState(endOfTrueBranch);
         EpsilonTransition trueTransition = EpsilonTransition.get();
