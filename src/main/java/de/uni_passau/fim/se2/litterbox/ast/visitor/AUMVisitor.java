@@ -459,7 +459,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param repeatTimes The statement causing the transition.
      */
     @Override
-    public void visit(RepeatTimesStmt repeatTimes) { //TODO check whether this simplified version is sufficient, correctness?
+    public void visit(RepeatTimesStmt repeatTimes) {
         addTransitionContextAware(repeatTimes.getUniqueName());
         int repeatStateIndex = getId(nextState);
         List<Stmt> listOfStmt = repeatTimes.getStmtList().getStmts().getListOfStmt();
@@ -481,13 +481,17 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(UntilStmt until) {
-        updatePresentState(nextState);
-        addTransition(presentState, until.getUniqueName());
-        int originalFromIndex = getId(presentState);
-        for (Stmt stmt : until.getStmtList().getStmts().getListOfStmt()) {
+        addTransitionContextAware(until.getUniqueName());
+        int repeatStateIndex = getId(nextState);
+        List<Stmt> listOfStmt = until.getStmtList().getStmts().getListOfStmt();
+        for (Stmt stmt : listOfStmt) {
             stmt.accept(this);
         }
-        nextState = states.get(originalFromIndex);
+        updatePresentState(nextState);
+        EpsilonTransition transition = EpsilonTransition.get();
+        State repeatState = states.get(repeatStateIndex - 1);
+        currentModel.addTransition(presentState, repeatState, transition);
+        this.nextState = repeatState;
     }
 
     @Override
