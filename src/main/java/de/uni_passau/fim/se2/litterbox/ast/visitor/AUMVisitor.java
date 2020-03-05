@@ -96,7 +96,7 @@ public class AUMVisitor implements ScratchVisitor {
 
     /**
      * Names of all programs to be analysed by this visitor.
-     * TODO maybe change this to be automatically inferred
+     *
      */
     private final Set<String> programs; // typesnames
 
@@ -156,14 +156,15 @@ public class AUMVisitor implements ScratchVisitor {
      * Creates a new instance of this visitor.
      *
      * @param pathToOutputDir Directory to hold the models.
-     * @param programs        Names of all programs that will be processed. TODO maybe automatically infer this
+     * @param programs        Names of all programs that will be processed.
      */
+    @SuppressWarnings({"ResultOfMethodCallIgnored", "ConstantConditions"})
     public AUMVisitor(String pathToOutputDir, Set<String> programs) {
         this.pathToOutputDir = pathToOutputDir;
         this.programs = programs;
-        id2modelData = new HashMap<Integer, ModelData>();
-        model2id = new HashMap<Model, Integer>();
-        modelsToSerialize = new HashSet<Model>();
+        id2modelData = new HashMap<>();
+        model2id = new HashMap<>();
+        modelsToSerialize = new HashSet<>();
         modelsCreated = 0;
         currentModel = new Model();
         currentActorName = "";
@@ -183,14 +184,14 @@ public class AUMVisitor implements ScratchVisitor {
      * every class, because models are serialized in files according to classes,
      * from which they were created.
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void serialiseModels() {
         // serialize models if necessary
         if (modelsToSerialize.size() > 0) {
-            File targetDirectory = new File(pathToOutputDir);
             try {
                 String fileName = pathToOutputDir + "/" + programName + ".models.ser";
                 File file = new File(fileName);
-                boolean newFile = file.createNewFile();
+                file.createNewFile();
                 BufferedOutputStream fileOutput = new BufferedOutputStream(
                         new FileOutputStream(new File(fileName), true));
                 ObjectOutputStream objectOutput =
@@ -244,10 +245,11 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Serialises the info collected.
      */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
     public void shutdownAnalysis() {
         // serialise models info
         File targetDirectory = new File(pathToOutputDir);
-        targetDirectory.mkdirs(); //TODO probably unnecessary here
+        targetDirectory.mkdirs();
         try {
             String fileName = "modelsdata.ser";
             BufferedOutputStream fileOutput = new BufferedOutputStream(
@@ -276,7 +278,7 @@ public class AUMVisitor implements ScratchVisitor {
         }
 
         // create index file
-        PrintStream ps = null;
+        PrintStream ps;
         try {
             ps = new PrintStream(new File(targetDirectory, "index.txt"));
         } catch (FileNotFoundException e) {
@@ -287,21 +289,20 @@ public class AUMVisitor implements ScratchVisitor {
 
         // fill the index
         List<Integer> ids =
-                new ArrayList<Integer>(id2modelData.keySet());
+                new ArrayList<>(id2modelData.keySet());
         System.out.println(ids.size() + " MODELS EXTRACTED");
         Collections.sort(ids);
         for (Integer id : ids) {
             ModelData modelData = id2modelData.get(id);
 
-            StringBuffer description = new StringBuffer();
-            description.append("INDEX:  ").append(id).append("\n");
-            description.append("MODEL:  ").append(modelData.getModelName());
-            description.append("\n");
-            description.append("CLASS:  ").append(modelData.getClassName());
-            description.append("\n");
-            description.append("METHOD: ").append(modelData.getMethodName());
-            description.append("\n");
             ps.println("--------------------------------------------------");
+            String description = "INDEX:  " + id + "\n"
+                    + "MODEL:  " + modelData.getModelName()
+                    + "\n"
+                    + "CLASS:  " + modelData.getClassName()
+                    + "\n"
+                    + "METHOD: " + modelData.getMethodName()
+                    + "\n";
             ps.print(description);
             ps.println("--------------------------------------------------");
             ps.println();
