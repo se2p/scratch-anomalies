@@ -80,11 +80,6 @@ public class AUMVisitor implements ScratchVisitor {
     private static final String SCRIPT = "script";
 
     /**
-     * Constant used for model naming.
-     */
-    private static final String MODEL = "model";
-
-    /**
      * Name of transitions modeling the true branch of control statements.
      */
     private static final String TRUE = "true";
@@ -126,11 +121,6 @@ public class AUMVisitor implements ScratchVisitor {
      * Is the same as the amount of scripts analysed.
      */
     private int modelsCreated;
-
-    /**
-     * Number of total actors analysed so far.
-     */
-    private int actorsAnalysed;
 
     /**
      * Name of the program currently analysed.
@@ -176,7 +166,6 @@ public class AUMVisitor implements ScratchVisitor {
         modelsToSerialize = new HashSet<Model>();
         modelsCreated = 0;
         currentModel = new Model();
-        actorsAnalysed = 0;
         currentActorName = "";
 
         // empty models dir
@@ -236,8 +225,8 @@ public class AUMVisitor implements ScratchVisitor {
         modelsToSerialize.add(toAdd);
         model2id.put(toAdd, modelsCreated);
         id2modelData.put(modelsCreated, new ModelData(
-                programName + "." + currentActorName + actorsAnalysed,
-                SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); // TODO check influence of method name
+                programName + "." + currentActorName,
+                SCRIPT + modelsToSerialize.size() + "()V", ACTOR));
         clear();
     }
 
@@ -249,7 +238,6 @@ public class AUMVisitor implements ScratchVisitor {
         states.clear();
         updatePresentState(null);
         nextState = null;
-        currentActorName = "";
         currentModel = new Model();
     }
 
@@ -356,6 +344,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     public void rollbackAnalysis(Model currentModel) {
         clear();
+        currentActorName = "";
         if (currentModel != null) {
             modelsToSerialize.remove(currentModel);
             model2id.remove(currentModel);
@@ -384,11 +373,11 @@ public class AUMVisitor implements ScratchVisitor {
     public void visit(Program program) {
         programName = program.getIdent().getName();
         for (ActorDefinition definition : program.getActorDefinitionList().getDefintions()) {
-            actorsAnalysed++;
             currentActorName = definition.getIdent().getName();
             for (Script script : definition.getScripts().getScriptList()) {
                 script.accept(this);
             }
+            currentActorName = "";
         }
         serialiseModels();
     }
