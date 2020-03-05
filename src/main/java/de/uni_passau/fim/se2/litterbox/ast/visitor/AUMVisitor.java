@@ -475,7 +475,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param repeatTimes The statement causing the transition.
      */
     @Override
-    public void visit(RepeatTimesStmt repeatTimes) {
+    public void visit(RepeatTimesStmt repeatTimes) { //TODO check whether this simplified version is sufficient, correctness?
         addTransitionContextAware(repeatTimes.getUniqueName());
         int repeatStateIndex = getId(nextState);
         State repeatState = states.get(repeatStateIndex - 1);
@@ -491,6 +491,12 @@ public class AUMVisitor implements ScratchVisitor {
         this.nextState = repeatState;
     }
 
+    /**
+     * Adds a transition for the loop and adds transitions for its statement
+     * list.
+     *
+     * @param until The statement causing the transition.
+     */
     @Override
     public void visit(UntilStmt until) {
         updatePresentState(nextState);
