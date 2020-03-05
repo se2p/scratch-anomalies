@@ -50,6 +50,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -68,16 +69,30 @@ public class AUMVisitor implements ScratchVisitor {
         AUMVisitor.logger.setLevel(Level.ALL);
     }
 
+    /**
+     * Constant used for actor naming.
+     */
+    private static final String ACTOR = "actor";
 
     /**
-     * Constant used for dummy script naming. TODO find more sophisticated solution
+     * Constant used for script naming.
      */
     private static final String SCRIPT = "script";
 
     /**
-     * Constant used for naming the models. TODO is that correct at all
+     * Constant used for model naming.
      */
     private static final String MODEL = "model";
+
+    /**
+     * Name of transitions modeling the true branch of control statements.
+     */
+    private static final String TRUE = "true";
+
+    /**
+     * Name of transitions modeling the false branch of control statements.
+     */
+    private static final String FALSE = "false";
 
     /**
      * Directory to store the models into.
@@ -91,19 +106,15 @@ public class AUMVisitor implements ScratchVisitor {
     private final Set<String> programs; // typesnames
 
     /**
-     * Mapping model id number => model data.
-     */
-    private final Map<Integer, ModelData> id2modelData;
-
-    /**
-     * Model of the currently processed script.
-     */
-    private Model currentModel;
-
-    /**
      * Models to serialize during next serialization.
      */
     private final Set<Model> modelsToSerialize;
+
+
+    /**
+     * Mapping model id number => model data.
+     */
+    private final Map<Integer, ModelData> id2modelData;
 
     /**
      * Mapping model => model id.
@@ -117,25 +128,51 @@ public class AUMVisitor implements ScratchVisitor {
     private int modelsCreated;
 
     /**
+     * Number of total actors analysed so far.
+     */
+    private int actorsAnalysed;
+
+    /**
      * Name of the program currently analysed.
      */
     private String program;
 
+    /**
+     * Name of the current actor the scripts of which are analysed currently.
+     */
+    private String currentActorName;
 
-    //TODO comment
-    private String actor;
-    private State from;
-    private State to;
+    /**
+     * Model of the currently processed script.
+     */
+    private Model currentModel;
+
+    /**
+     * List of all states produced per model.
+     */
     private List<State> states = new LinkedList<>();
-    private static final String TRUE = "true";
-    private static final String FALSE = "false";
-    private static final String SPRITE = "Sprite";
-    private int spriteCount;
 
-    private int getId(State state) { //TODO comment
-        String s = state.toString();
-        return Integer.parseInt(s.substring(s.length() - 1));
-    }
+    /**
+     * The state which will be used as starting edge for the next transition.
+     */
+    private State presentState;
+
+    /**
+     * The state which will be used as end point for the next transition.
+     */
+    private State nextState;
+
+    /**
+     * Stack holding the states of control statements that have to be looped
+     * back to.
+     */
+    private Stack<State> controlStmtStates;
+
+    /**
+     * Indicates that the next transition has to loop back to the state of a
+     * control statement.
+     */
+    private boolean lastOfList = false;
 
     /**
      * Creates a new instance of this visitor.
@@ -145,14 +182,15 @@ public class AUMVisitor implements ScratchVisitor {
      */
     public AUMVisitor(String pathToOutputDir, Set<String> programs) {
         this.pathToOutputDir = pathToOutputDir;
-        this.programs = new HashSet<String>(programs);
+        this.programs = programs;
         this.id2modelData = new HashMap<Integer, ModelData>();
         this.model2id = new HashMap<Model, Integer>();
         this.modelsToSerialize = new HashSet<Model>();
         this.modelsCreated = 0;
         this.currentModel = new Model();
-        this.spriteCount = 0;
-        this.actor = "";
+        this.actorsAnalysed = 0;
+        this.currentActorName = "";
+        this.controlStmtStates = new Stack<>();
 
         // empty models dir
         File destDir = new File(this.pathToOutputDir);
@@ -207,8 +245,23 @@ public class AUMVisitor implements ScratchVisitor {
         this.modelsCreated++;
         this.modelsToSerialize.add(toAdd);
         this.model2id.put(toAdd, this.modelsCreated);
-        this.id2modelData.put(this.modelsCreated, new ModelData(program + "." + actor + spriteCount, SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
+        this.id2modelData.put(this.modelsCreated, new ModelData(program + "." + currentActorName + actorsAnalysed, SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
         // TODO whether it is correct to name every class the same here or not. Maybe this is not the right place to do so
+        clear();
+    }
+
+    /**
+     * Clears the states of the visitor which are dependent on the current
+     * script which is analysed.
+     */
+    private void clear() {
+        this.states.clear();
+        updatePresentState(null);
+        this.nextState = null;
+        this.currentActorName = "";
+        this.currentModel = new Model();
+        this.lastOfList = false;
+        this.controlStmtStates.clear();
     }
 
     /**
@@ -280,20 +333,6 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     /**
-     * Serializes list of types analyzed by this Analyzer into given stream.
-     *
-     * @param out Stream to serialize the types' names to.
-     * @throws IOException Thrown by writeObject in case there are problems
-     *                     with the underlying stream.
-     */
-    private void writePrograms(ObjectOutputStream out) throws IOException {
-        out.writeInt(this.programs.size());
-        for (String program : this.programs) {
-            out.writeObject(program);
-        }
-    }
-
-    /**
      * Serializes id2modelData field of the analyzer into given stream.
      *
      * @param out Stream to serialize the field to.
@@ -310,29 +349,54 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     /**
-     * Called when analysis of a script produces results in an exception.
+     * Serializes list of types analyzed by this Analyzer into given stream.
+     *
+     * @param out Stream to serialize the types' names to.
+     * @throws IOException Thrown by writeObject in case there are problems
+     *                     with the underlying stream.
      */
-    public void rollbackAnalysis(Model currentModel) {
-        if (currentModel == null) {
-            this.currentModel = new Model();
-            return;
+    private void writePrograms(ObjectOutputStream out) throws IOException {
+        out.writeInt(this.programs.size());
+        for (String program : this.programs) {
+            out.writeObject(program);
         }
-        this.modelsToSerialize.remove(currentModel);
-        this.model2id.remove(currentModel);
-        this.currentModel = new Model();
     }
 
     /**
-     * Creates an actor usage model for this program.
+     * Called when analysis of a script produces results in an exception.
+     */
+    public void rollbackAnalysis(Model currentModel) {
+        clear();
+        if (currentModel != null) {
+            this.modelsToSerialize.remove(currentModel);
+            this.model2id.remove(currentModel);
+        }
+    }
+
+    /**
+     * Updates the present state for the next transition to {@code to}.
      *
-     * @param program The program of which the actor usage model is to be created.
+     * @param nextPresentState The state to which the next transition will be
+     *                         added.
+     */
+    private void updatePresentState(State nextPresentState) {
+        presentState = nextPresentState;
+    }
+
+    /**
+     * Iterates over every actor definition of this program and lets every
+     * script accept this visitor and serialises the models produced.
+     * Avoids unnecessarily complex iteration by skipping the visit methods for
+     * actor definitions.
+     *
+     * @param program The program scripts of which are to be analysed.
      */
     @Override
     public void visit(Program program) {
         this.program = program.getIdent().getName();
         for (ActorDefinition definition : program.getActorDefinitionList().getDefintions()) {
-            spriteCount++;
-            actor = definition.getIdent().getName();
+            actorsAnalysed++;
+            currentActorName = definition.getIdent().getName();
             for (Script script : definition.getScripts().getScriptList()) {
                 script.accept(this);
             }
@@ -341,109 +405,170 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     /**
-     * Does the magic. Work in progress. TODO
+     * Creates an actor usage model of this script by iterating every statement.
      *
-     * @param script A script of an actor. TODO
+     * @param script The script of which an actor usage model is to be created.
      */
     @Override
     public void visit(Script script) {
-        currentModel = new Model();
         script.getEvent().accept(this);
         for (Stmt stmt : script.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
         EpsilonTransition returnTransition = EpsilonTransition.get();
-        from = to;
-        to = currentModel.getExitState();
-        currentModel.addTransition(from, to, returnTransition);
+        updatePresentState(nextState);
+        nextState = currentModel.getExitState();
+        currentModel.addTransition(presentState, nextState, returnTransition);
         endScriptAnalysis(new Model(currentModel));
-        currentModel = new Model();
     }
 
+    /**
+     * Adds a transition for the event of the script and sets the present state
+     * to the entry state of the model.
+     *
+     * @param event The event of the script currently analysed.
+     */
     @Override
     public void visit(Event event) {
-        from = currentModel.getEntryState();
-        states.add(from);
-        addTransition(from, event.getUniqueName());
+        updatePresentState(currentModel.getEntryState());
+        states.add(presentState);
+        addTransition(presentState, event.getUniqueName());
     }
 
+    /**
+     * Adds a transition for the statement to the current model.
+     *
+     * @param stmt The statement causing the transition.
+     */
     @Override
     public void visit(Stmt stmt) {
-        from = to;
-        addTransition(from, stmt.getUniqueName());
+        addTransitionContextAware(stmt.getUniqueName());
     }
 
+    /***
+     * Adds a transition for the loop and adds transitions for its statement
+     * list.
+     *
+     * @param repeatForever The statement causing the transition.
+     */
     @Override
-    public void visit(RepeatForeverStmt repeatForeverStmt) {
-        from = to;
-        addTransition(from, repeatForeverStmt.getUniqueName());
-        int originalFromIndex = getId(from);
-        for (Stmt stmt : repeatForeverStmt.getStmtList().getStmts().getListOfStmt()) {
-            stmt.accept(this);
+    public void visit(RepeatForeverStmt repeatForever) {
+        addTransitionContextAware(repeatForever.getUniqueName());
+        int repeatStateIndex = getId(nextState);
+        State repeatState = states.get(repeatStateIndex - 1);
+        controlStmtStates.push(repeatState);
+        List<Stmt> listOfStmt = repeatForever.getStmtList().getStmts().getListOfStmt();
+        int size = listOfStmt.size();
+        for (int i = 0; i < size; i++) {
+            if (i == size - 1) {
+                lastOfList = true;
+            }
+            listOfStmt.get(i).accept(this);
         }
-        to = states.get(originalFromIndex);
+        this.nextState = repeatState;
+
     }
 
     @Override
     public void visit(IfElseStmt ifElseStmt) {
-        from = to;
-        addTransition(from, ifElseStmt.getUniqueName());
-        from = to;
-        int originalFromIndex = getId(from);
-        addTransition(from, TRUE);
+        updatePresentState(nextState);
+        addTransition(presentState, ifElseStmt.getUniqueName());
+        updatePresentState(nextState);
+        int originalFromIndex = getId(presentState);
+        addTransition(presentState, TRUE);
         for (Stmt stmt : ifElseStmt.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
         State afterIf = states.get(originalFromIndex - 1);
         addTransition(afterIf, FALSE);
-        from = states.get(originalFromIndex - 1);
+        updatePresentState(states.get(originalFromIndex - 1));
         for (Stmt stmt : ifElseStmt.getElseStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        to = afterIf;
+        nextState = afterIf;
     }
 
     @Override
     public void visit(IfThenStmt ifThenStmt) {
-        from = to;
-        addTransition(from, ifThenStmt.getUniqueName());
-        from = to;
-        addTransition(from, TRUE);
-        int originalFromIndex = getId(from);
+        updatePresentState(nextState);
+        addTransition(presentState, ifThenStmt.getUniqueName());
+        updatePresentState(nextState);
+        addTransition(presentState, TRUE);
+        int originalFromIndex = getId(presentState);
         for (Stmt stmt : ifThenStmt.getThenStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        to = states.get(originalFromIndex - 1);
+        nextState = states.get(originalFromIndex - 1);
     }
 
     @Override
     public void visit(RepeatTimesStmt repeatTimesStmt) {
-        from = to;
-        addTransition(from, repeatTimesStmt.getUniqueName());
-        int originalFromIndex = getId(from);
+        updatePresentState(nextState);
+        addTransition(presentState, repeatTimesStmt.getUniqueName());
+        int originalFromIndex = getId(presentState);
         for (Stmt stmt : repeatTimesStmt.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        to = states.get(originalFromIndex);
+        nextState = states.get(originalFromIndex);
     }
 
     @Override
     public void visit(UntilStmt untilStmt) {
-        from = to;
-        addTransition(from, untilStmt.getUniqueName());
-        int originalFromIndex = getId(from);
+        updatePresentState(nextState);
+        addTransition(presentState, untilStmt.getUniqueName());
+        int originalFromIndex = getId(presentState);
         for (Stmt stmt : untilStmt.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        to = states.get(originalFromIndex);
+        nextState = states.get(originalFromIndex);
     }
 
-    private void addTransition(State from, String uniqueName) {
-        MethodCall methodCall = new MethodCall(SPRITE + spriteCount, uniqueName);
+    /**
+     * A workaround to retrieve the id of a state without changing the
+     * OUMExtractor source code. TODO introduce a method to the source code.
+     *
+     * @param state The state of which the id is queried.
+     * @return The id of the state.
+     */
+    private int getId(State state) {
+        String s = state.toString();
+        return Integer.parseInt(s.substring(s.length() - 1));
+    }
+
+    /**
+     * Adds a transition being aware of the context so that loops back to
+     * control statements are made.
+     *
+     * @param stmtName Name of the statement causing this transition.
+     */
+    private void addTransitionContextAware(String stmtName) {
+        if (!lastOfList) {
+            updatePresentState(nextState);
+            addTransition(presentState, stmtName);
+        } else {
+            updatePresentState(nextState);
+            MethodCall methodCall = new MethodCall(ACTOR + actorsAnalysed, stmtName); //TODO correctness?
+            InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
+            State controlStmtState = controlStmtStates.pop();
+            currentModel.addTransition(presentState, controlStmtState, transition);
+            nextState = controlStmtState;
+            lastOfList = false;
+        }
+    }
+
+    /**
+     * Adds a transition from the given state to {@code this.nextState} to the
+     * current model.
+     *
+     * @param presentState The starting state of the transition added.
+     * @param stmtName     The name of the block causing the transition.
+     */
+    private void addTransition(State presentState, String stmtName) { //TODO from is probably always this.from, include from = to;?
+        MethodCall methodCall = new MethodCall(ACTOR + actorsAnalysed, stmtName); //TODO correctness?
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
-        State followUpState = currentModel.getFollowUpState(from, transition);
+        State followUpState = currentModel.getFollowUpState(presentState, transition);
         states.add(followUpState);
-        to = followUpState;
-        currentModel.addTransition(from, followUpState, transition);
+        nextState = followUpState;
+        currentModel.addTransition(presentState, followUpState, transition);
     }
 }
