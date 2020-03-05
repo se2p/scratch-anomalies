@@ -475,7 +475,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private void addLoopTransitions(String stmtName, StmtList stmtList) {
         addTransitionContextAware(stmtName);
-        int repeatStateIndex = getId(nextState);
+        int repeatStateIndex = nextState.getId();
         List<Stmt> listOfStmt = stmtList.getStmts().getListOfStmt();
         for (Stmt stmt : listOfStmt) {
             stmt.accept(this);
@@ -497,13 +497,13 @@ public class AUMVisitor implements ScratchVisitor {
     public void visit(IfElseStmt ifElseStmt) {
         updatePresentState(nextState);
         addTransition(presentState, ifElseStmt.getUniqueName());
-        int afterIfStmtIndex = getId(nextState);
+        int afterIfStmtIndex = nextState.getId();
         updatePresentState(nextState);
         addTransition(presentState, TRUE);
         for (Stmt stmt : ifElseStmt.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        int endOfTrueBranchStateId = getId(nextState);
+        int endOfTrueBranchStateId = nextState.getId();
         presentState = states.get(afterIfStmtIndex - 1);
         addTransition(presentState, FALSE);
         for (Stmt stmt : ifElseStmt.getElseStmts().getStmts().getListOfStmt()) {
@@ -532,13 +532,13 @@ public class AUMVisitor implements ScratchVisitor {
     public void visit(IfThenStmt ifThenStmt) {
         updatePresentState(nextState);
         addTransition(presentState, ifThenStmt.getUniqueName());
-        int afterIfStmtIndex = getId(nextState);
+        int afterIfStmtIndex = nextState.getId();
         updatePresentState(nextState);
         addTransition(presentState, TRUE);
         for (Stmt stmt : ifThenStmt.getThenStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        int endOfTrueBranchStateId = getId(nextState);
+        int endOfTrueBranchStateId = nextState.getId();
         presentState = states.get(afterIfStmtIndex - 1);
         addTransition(presentState, FALSE);
         State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
@@ -548,18 +548,6 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     //TODO add *every* state to the states list every time
-
-    /**
-     * A workaround to retrieve the id of a state without changing the
-     * OUMExtractor source code. TODO introduce a method to the source code.
-     *
-     * @param state The state of which the id is queried.
-     * @return The id of the state.
-     */
-    private int getId(State state) { //FIXME this does not work in case the state has a higher index than 9
-        String s = state.toString();
-        return Integer.parseInt(s.substring(s.length() - 1));
-    }
 
     /**
      * Adds a transition being aware of the context so that loops back to
