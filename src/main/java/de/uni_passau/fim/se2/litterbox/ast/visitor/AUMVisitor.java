@@ -485,10 +485,19 @@ public class AUMVisitor implements ScratchVisitor {
         this.nextState = repeatState;
     }
 
+    /**
+     * Adds a transition for the if-statement itself, and for its true and false
+     * branches and the statements in the branches.
+     *
+     * @param ifElseStmt The statement causing the transition.
+     */
     @Override
     public void visit(IfElseStmt ifElseStmt) {
+        // add the transition for the if statement itself
         updatePresentState(nextState);
         addTransition(presentState, ifElseStmt.getUniqueName());
+
+        // add a transition todo
         updatePresentState(nextState);
         int originalFromIndex = getId(presentState);
         addTransition(presentState, TRUE);
@@ -504,19 +513,33 @@ public class AUMVisitor implements ScratchVisitor {
         nextState = afterIf;
     }
 
+    /**
+     * Adds a transition for the if-statement itself, and for its true and false
+     * branches and the statements in the true branch.
+     *
+     * @param ifThenStmt The statement causing the transition.
+     */
     @Override
     public void visit(IfThenStmt ifThenStmt) {
         updatePresentState(nextState);
         addTransition(presentState, ifThenStmt.getUniqueName());
+        int afterIfStmtIndex = getId(nextState);
         updatePresentState(nextState);
         addTransition(presentState, TRUE);
-        int originalFromIndex = getId(presentState);
         for (Stmt stmt : ifThenStmt.getThenStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        nextState = states.get(originalFromIndex - 1);
+        int endOfTrueBranchStateId = getId(nextState); 
+        presentState = states.get(afterIfStmtIndex - 1);
+        addTransition(presentState, FALSE);
+        updatePresentState(nextState);
+        State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
+        updatePresentState(endOfTrueBranch);
+        EpsilonTransition trueTransition = EpsilonTransition.get();
+        currentModel.addTransition(presentState, nextState, trueTransition);
     }
 
+    //TODO add *every* state to the states list every time
     /**
      * A workaround to retrieve the id of a state without changing the
      * OUMExtractor source code. TODO introduce a method to the source code.
@@ -524,7 +547,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param state The state of which the id is queried.
      * @return The id of the state.
      */
-    private int getId(State state) {
+    private int getId(State state) { //FIXME this does not work in case the state has a higher index than 9
         String s = state.toString();
         return Integer.parseInt(s.substring(s.length() - 1));
     }
@@ -547,7 +570,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param presentState The starting state of the transition added.
      * @param stmtName     The name of the block causing the transition.
      */
-    private void addTransition(State presentState, String stmtName) { //TODO from is probably always this.from, include from = to;?
+    private void addTransition(State presentState, String stmtName) {
         MethodCall methodCall = new MethodCall(ACTOR + actorsAnalysed, stmtName); //TODO correctness?
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
         State followUpState = currentModel.getFollowUpState(presentState, transition);
