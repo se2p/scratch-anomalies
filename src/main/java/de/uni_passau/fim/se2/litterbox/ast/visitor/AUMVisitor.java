@@ -237,8 +237,7 @@ public class AUMVisitor implements ScratchVisitor {
         model2id.put(toAdd, modelsCreated);
         id2modelData.put(modelsCreated, new ModelData(
                 programName + "." + currentActorName + actorsAnalysed,
-                SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); //TODO I am not sure
-        // TODO whether it is correct to name every class the same here or not. Maybe this is not the right place to do so
+                SCRIPT + modelsCreated + "()V", MODEL + modelsCreated)); // TODO check influence of method name
         clear();
     }
 
@@ -569,7 +568,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtName     The name of the block causing the transition.
      */
     private void addTransition(State presentState, String stmtName) {
-        MethodCall methodCall = new MethodCall(ACTOR + actorsAnalysed, stmtName); //TODO correctness?
+        MethodCall methodCall = new MethodCall(ACTOR, stmtName);
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
         State followUpState = currentModel.getFollowUpState(presentState, transition);
         states.add(followUpState);
