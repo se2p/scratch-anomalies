@@ -22,12 +22,14 @@ import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
+import de.uni_passau.fim.se2.litterbox.ast.model.event.GreenFlag;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfElseStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfThenStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatForeverStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatTimesStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.UntilStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.spritemotion.MoveSteps;
 import org.softevo.oumextractor.modelcreator1.ModelData;
 import org.softevo.oumextractor.modelcreator1.model.EpsilonTransition;
 import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
@@ -50,7 +52,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -163,18 +164,6 @@ public class AUMVisitor implements ScratchVisitor {
     private State nextState;
 
     /**
-     * Stack holding the states of control statements that have to be looped
-     * back to.
-     */
-    private Stack<State> controlStmtStates;
-
-    /**
-     * Indicates that the next transition has to loop back to the state of a
-     * control statement.
-     */
-    private boolean lastOfList = false;
-
-    /**
      * Creates a new instance of this visitor.
      *
      * @param pathToOutputDir Directory to hold the models.
@@ -190,7 +179,6 @@ public class AUMVisitor implements ScratchVisitor {
         this.currentModel = new Model();
         this.actorsAnalysed = 0;
         this.currentActorName = "";
-        this.controlStmtStates = new Stack<>();
 
         // empty models dir
         File destDir = new File(this.pathToOutputDir);
@@ -260,8 +248,6 @@ public class AUMVisitor implements ScratchVisitor {
         this.nextState = null;
         this.currentActorName = "";
         this.currentModel = new Model();
-        this.lastOfList = false;
-        this.controlStmtStates.clear();
     }
 
     /**
@@ -455,16 +441,14 @@ public class AUMVisitor implements ScratchVisitor {
     public void visit(RepeatForeverStmt repeatForever) {
         addTransitionContextAware(repeatForever.getUniqueName());
         int repeatStateIndex = getId(nextState);
-        State repeatState = states.get(repeatStateIndex - 1);
-        controlStmtStates.push(repeatState);
         List<Stmt> listOfStmt = repeatForever.getStmtList().getStmts().getListOfStmt();
-        int size = listOfStmt.size();
-        for (int i = 0; i < size; i++) {
-            if (i == size - 1) {
-                lastOfList = true;
-            }
-            listOfStmt.get(i).accept(this);
+        for (Stmt stmt : listOfStmt) {
+            stmt.accept(this);
         }
+        updatePresentState(nextState);
+        EpsilonTransition transition = EpsilonTransition.get();
+        State repeatState = states.get(repeatStateIndex - 1);
+        currentModel.addTransition(presentState, repeatState, transition);
         this.nextState = repeatState;
     }
 
@@ -478,16 +462,14 @@ public class AUMVisitor implements ScratchVisitor {
     public void visit(RepeatTimesStmt repeatTimes) { //TODO check whether this simplified version is sufficient, correctness?
         addTransitionContextAware(repeatTimes.getUniqueName());
         int repeatStateIndex = getId(nextState);
-        State repeatState = states.get(repeatStateIndex - 1);
-        controlStmtStates.push(repeatState);
         List<Stmt> listOfStmt = repeatTimes.getStmtList().getStmts().getListOfStmt();
-        int size = listOfStmt.size();
-        for (int i = 0; i < size; i++) {
-            if (i == size - 1) {
-                lastOfList = true;
-            }
-            listOfStmt.get(i).accept(this);
+        for (Stmt stmt : listOfStmt) {
+            stmt.accept(this);
         }
+        updatePresentState(nextState);
+        EpsilonTransition transition = EpsilonTransition.get();
+        State repeatState = states.get(repeatStateIndex - 1);
+        currentModel.addTransition(presentState, repeatState, transition);
         this.nextState = repeatState;
     }
 
@@ -559,18 +541,8 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtName Name of the statement causing this transition.
      */
     private void addTransitionContextAware(String stmtName) {
-        if (!lastOfList) {
-            updatePresentState(nextState);
-            addTransition(presentState, stmtName);
-        } else {
-            updatePresentState(nextState);
-            MethodCall methodCall = new MethodCall(ACTOR + actorsAnalysed, stmtName); //TODO correctness?
-            InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
-            State controlStmtState = controlStmtStates.pop();
-            currentModel.addTransition(presentState, controlStmtState, transition);
-            nextState = controlStmtState;
-            lastOfList = false;
-        }
+        updatePresentState(nextState);
+        addTransition(presentState, stmtName);
     }
 
     /**
