@@ -96,7 +96,6 @@ public class AUMVisitor implements ScratchVisitor {
 
     /**
      * Names of all programs to be analysed by this visitor.
-     *
      */
     private final Set<String> programs; // typesnames
 
@@ -487,30 +486,47 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(IfElseStmt ifElseStmt) {
+        // ad control stmt
         updatePresentState(nextState);
         addTransition(presentState, ifElseStmt.getUniqueName());
+        // save index of state after control stmt
         int afterIfStmtIndex = nextState.getId();
+        // add the epsilon transition for the true branch
         updatePresentState(nextState);
-        addTransition(presentState, TRUE);
+        EpsilonTransition transition = EpsilonTransition.get();
+        State followUpState = currentModel.getFollowUpState(presentState, transition);
+        states.add(followUpState);
+        currentModel.addTransition(presentState, followUpState, transition);
+        nextState = followUpState;
+        // add true branch stmts
         for (Stmt stmt : ifElseStmt.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        int endOfTrueBranchStateId = nextState.getId();
+        // save index of last state in true branch
+        int lastTrueBranchIndex = nextState.getId();
+        // add epsilon transition for the false branch
         presentState = states.get(afterIfStmtIndex - 1);
-        addTransition(presentState, FALSE);
+        System.out.println(presentState);
+        EpsilonTransition trans = EpsilonTransition.get();
+        State follow = currentModel.getNewState();
+        states.add(follow);
+        nextState = follow;
+        currentModel.addTransition(presentState, follow, trans);
+        // add false branch stmts
         for (Stmt stmt : ifElseStmt.getElseStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
+        // add epsilon transition after false branch
         State next = currentModel.getNewState();
         states.add(next);
         updatePresentState(nextState);
         EpsilonTransition falseTransition = EpsilonTransition.get();
         currentModel.addTransition(presentState, next, falseTransition);
-        State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
+        // add epsiolon transition after true branch
+        State endOfTrueBranch = states.get(lastTrueBranchIndex - 1);
         updatePresentState(endOfTrueBranch);
         EpsilonTransition trueTransition = EpsilonTransition.get();
         currentModel.addTransition(presentState, next, trueTransition);
-        updatePresentState(next);
         nextState = next;
     }
 
