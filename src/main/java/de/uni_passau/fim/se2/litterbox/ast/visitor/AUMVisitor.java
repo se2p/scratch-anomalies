@@ -80,16 +80,6 @@ public class AUMVisitor implements ScratchVisitor {
     private static final String SCRIPT = "script";
 
     /**
-     * Name of transitions modeling the true branch of control statements.
-     */
-    private static final String TRUE = "true";
-
-    /**
-     * Name of transitions modeling the false branch of control statements.
-     */
-    private static final String FALSE = "false";
-
-    /**
      * Directory to store the models into.
      */
     private String pathToOutputDir;
@@ -355,7 +345,7 @@ public class AUMVisitor implements ScratchVisitor {
      * Updates the present state for the next transition to {@code to}.
      *
      * @param startOfTransition The state to which the next transition will be
-     *                         added.
+     *                          added.
      */
     private void setTransitionStartTo(State startOfTransition) {
         transitionStart = startOfTransition;
