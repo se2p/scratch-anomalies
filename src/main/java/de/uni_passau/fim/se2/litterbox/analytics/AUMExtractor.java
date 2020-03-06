@@ -73,8 +73,8 @@ public class AUMExtractor {
     }
 
     /**
-     * This method should be called whenever analysis of a new script is
-     * starting.  This ensures that the number of scripts present is correct.
+     * This method should be called whenever analysis of a project is starting.
+     * This ensures that the number of projects present is correct.
      */
     public static void newProjectPresent() {
         projectsPresent++;
@@ -125,28 +125,52 @@ public class AUMExtractor {
             }
             AUMVisitor visitor = new AUMVisitor(pathToOutputFolder, programs);
             Set<Exception> exceptions = new HashSet<>();
+            int successfullyAnalysed = 0;
+            int skippedDueToParsing = 0;
+            int skippedDueToAUMExtractor = 0;
+            int programsProcessed = 0;
             for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
                 ObjectMapper mapper = new ObjectMapper();
                 Program program;
                 if ((FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json")) {
+                    programsProcessed++;
+                    int percentProcessed = (100 * programsProcessed / programs.size());
+                    System.out.println("Analysing " + programsProcessed + "/" + programs.size() + " ("
+                            + percentProcessed + "% done): " + fileEntry.getName());
                     try {
                         program = ProgramParser.parseProgram(fileEntry.getName(), mapper.readTree(fileEntry));
                     } catch (Exception e) {
+                        skippedDueToParsing++;
+                        exceptions.add(e);
                         logger.severe("Unable to parse project: " + fileEntry.getAbsolutePath());
                         continue;
                     }
                     try {
                         program.accept(visitor);
+                        successfullyAnalysed++;
                     } catch (Exception e) {
+                        skippedDueToAUMExtractor++;
                         exceptions.add(e);
+                        logger.severe("Creating AUM for the project failed.");
                         visitor.rollbackAnalysis(null);
                     }
                 }
             }
-            visitor.shutdownAnalysis();
+            System.out.println("\n\n\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+            System.out.println("EXCEPTIONS WHICH OCCURRED");
             for (Exception exception : exceptions) {
                 exception.printStackTrace();
             }
+            System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+            System.out.println("Skipped due to parsing: " + skippedDueToParsing + " projects.");
+            System.out.println("Skipped during creation of AUMs: " + skippedDueToAUMExtractor + " projects.");
+            System.out.println("Total number of exceptions which occurred: " + exceptions.size());
+            System.out.println("Projects for which analysis started: " + projectsPresent);
+            int totalProjects = skippedDueToAUMExtractor + skippedDueToParsing + successfullyAnalysed;
+            System.out.println("Projects analysed/present: " + successfullyAnalysed + "/" + totalProjects);
+            System.out.println("Scripts analysed/present: " + scriptsAnalysed + "/" + scriptsPresent);
+            System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+            visitor.shutdownAnalysis();
         }
     }
 }

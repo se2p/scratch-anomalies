@@ -18,6 +18,7 @@
  */
 package de.uni_passau.fim.se2.litterbox.ast.visitor;
 
+import de.uni_passau.fim.se2.litterbox.analytics.AUMExtractor;
 import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
@@ -129,7 +130,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * List of all states produced per model.
      */
-    private List<State> states = new LinkedList<>();
+    private List<State> states = new LinkedList<>(); //TODO introduce HashMap
 
     /**
      * The state which will be used as starting edge for the next transition.
@@ -188,7 +189,6 @@ public class AUMVisitor implements ScratchVisitor {
                 objectOutput.writeInt(modelsToSerialize.size());
                 for (Model model : modelsToSerialize) {
                     //model.minimize(); TODO do I need this
-                    System.out.println(model);
                     objectOutput.writeInt(model2id.get(model));
                     objectOutput.writeObject(model);
                 }
@@ -208,6 +208,7 @@ public class AUMVisitor implements ScratchVisitor {
      * Called after analysis of a script is done.
      */
     public void endScriptAnalysis(Model toAdd) {
+        AUMExtractor.newScriptAnalysed();
         for (int i = 0; i < states.size(); i++) {
             assert (i + 1 == states.get(i).getId());
         }
@@ -361,6 +362,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Program program) {
+        AUMExtractor.newProjectPresent();
         programName = program.getIdent().getName();
         for (ActorDefinition definition : program.getActorDefinitionList().getDefintions()) {
             currentActorName = definition.getIdent().getName();
@@ -379,6 +381,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Script script) {
+        AUMExtractor.newScriptPresent();
         script.getEvent().accept(this);
         for (Stmt stmt : script.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
@@ -486,7 +489,6 @@ public class AUMVisitor implements ScratchVisitor {
         int endOfTrueBranchStateId = transitionEnd.getId();
         // add epsilon transition for the false branch
         transitionStart = states.get(afterIfStmtIndex - 1);
-        System.out.println(transitionStart);
         EpsilonTransition trans = EpsilonTransition.get();
         State follow = currentModel.getNewState();
         states.add(follow);
