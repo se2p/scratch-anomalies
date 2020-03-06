@@ -522,7 +522,7 @@ public class AUMVisitor implements ScratchVisitor {
         updatePresentState(nextState);
         EpsilonTransition falseTransition = EpsilonTransition.get();
         currentModel.addTransition(presentState, next, falseTransition);
-        // add epsiolon transition after true branch
+        // add epsilon transition after true branch
         State endOfTrueBranch = states.get(lastTrueBranchIndex - 1);
         updatePresentState(endOfTrueBranch);
         EpsilonTransition trueTransition = EpsilonTransition.get();
@@ -538,17 +538,31 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(IfThenStmt ifThenStmt) {
+        // add control stmt
         updatePresentState(nextState);
         addTransition(presentState, ifThenStmt.getUniqueName());
+        // save index of state after control stmt
         int afterIfStmtIndex = nextState.getId();
+        // add epsilon transition for true branch
         updatePresentState(nextState);
-        addTransition(presentState, TRUE);
+        EpsilonTransition transition = EpsilonTransition.get();
+        State followUpState = currentModel.getFollowUpState(presentState, transition);
+        states.add(followUpState);
+        currentModel.addTransition(presentState, followUpState, transition);
+        nextState = followUpState;
+        // add true branch stmts
         for (Stmt stmt : ifThenStmt.getThenStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
         int endOfTrueBranchStateId = nextState.getId();
-        presentState = states.get(afterIfStmtIndex - 1);
-        addTransition(presentState, FALSE);
+        // add epsilon transition after false branch
+        State next = currentModel.getNewState();
+        states.add(next);
+        updatePresentState(states.get(afterIfStmtIndex - 1));
+        EpsilonTransition falseTransition = EpsilonTransition.get();
+        currentModel.addTransition(presentState, next, falseTransition);
+        nextState = next;
+        // add epsilon transition after true branch
         State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
         updatePresentState(endOfTrueBranch);
         EpsilonTransition trueTransition = EpsilonTransition.get();
