@@ -144,12 +144,12 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * The state which will be used as starting edge for the next transition.
      */
-    private State presentState;
+    private State transitionStart;
 
     /**
      * The state which will be used as end point for the next transition.
      */
-    private State nextState;
+    private State transitionEnd;
 
     /**
      * Creates a new instance of this visitor.
@@ -236,8 +236,8 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private void clear() {
         states.clear();
-        updatePresentState(null);
-        nextState = null;
+        setTransitionStartTo(null);
+        transitionEnd = null;
         currentModel = new Model();
     }
 
@@ -354,11 +354,11 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Updates the present state for the next transition to {@code to}.
      *
-     * @param nextPresentState The state to which the next transition will be
+     * @param startOfTransition The state to which the next transition will be
      *                         added.
      */
-    private void updatePresentState(State nextPresentState) {
-        presentState = nextPresentState;
+    private void setTransitionStartTo(State startOfTransition) {
+        transitionStart = startOfTransition;
     }
 
     /**
@@ -394,9 +394,9 @@ public class AUMVisitor implements ScratchVisitor {
             stmt.accept(this);
         }
         EpsilonTransition returnTransition = EpsilonTransition.get();
-        updatePresentState(nextState);
-        nextState = currentModel.getExitState();
-        currentModel.addTransition(presentState, nextState, returnTransition);
+        setTransitionStartTo(transitionEnd);
+        transitionEnd = currentModel.getExitState();
+        currentModel.addTransition(transitionStart, transitionEnd, returnTransition);
         endScriptAnalysis(new Model(currentModel));
     }
 
@@ -408,9 +408,9 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Event event) {
-        updatePresentState(currentModel.getEntryState());
-        states.add(presentState);
-        addTransition(presentState, event.getUniqueName());
+        setTransitionStartTo(currentModel.getEntryState());
+        states.add(transitionStart);
+        addTransition(transitionStart, event.getUniqueName());
     }
 
     /**
@@ -466,16 +466,16 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private void addLoopTransitions(String stmtName, StmtList stmtList) {
         addTransitionContextAware(stmtName);
-        int repeatStateIndex = nextState.getId();
+        int repeatStateIndex = transitionEnd.getId();
         List<Stmt> listOfStmt = stmtList.getStmts().getListOfStmt();
         for (Stmt stmt : listOfStmt) {
             stmt.accept(this);
         }
-        updatePresentState(nextState);
+        setTransitionStartTo(transitionEnd);
         EpsilonTransition transition = EpsilonTransition.get();
         State repeatState = states.get(repeatStateIndex - 1);
-        currentModel.addTransition(presentState, repeatState, transition);
-        nextState = repeatState;
+        currentModel.addTransition(transitionStart, repeatState, transition);
+        transitionEnd = repeatState;
     }
 
     /**
@@ -487,47 +487,28 @@ public class AUMVisitor implements ScratchVisitor {
     @Override
     public void visit(IfElseStmt ifElseStmt) {
         // ad control stmt
-        updatePresentState(nextState);
-        addTransition(presentState, ifElseStmt.getUniqueName());
-        // save index of state after control stmt
-        int afterIfStmtIndex = nextState.getId();
-        // add the epsilon transition for the true branch
-        updatePresentState(nextState);
-        EpsilonTransition transition = EpsilonTransition.get();
-        State followUpState = currentModel.getFollowUpState(presentState, transition);
-        states.add(followUpState);
-        currentModel.addTransition(presentState, followUpState, transition);
-        nextState = followUpState;
+        int afterIfStmtIndex = addTrueBranch(ifElseStmt.getUniqueName());
         // add true branch stmts
         for (Stmt stmt : ifElseStmt.getStmtList().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
         // save index of last state in true branch
-        int lastTrueBranchIndex = nextState.getId();
+        int endOfTrueBranchStateId = transitionEnd.getId();
         // add epsilon transition for the false branch
-        presentState = states.get(afterIfStmtIndex - 1);
-        System.out.println(presentState);
+        transitionStart = states.get(afterIfStmtIndex - 1);
+        System.out.println(transitionStart);
         EpsilonTransition trans = EpsilonTransition.get();
         State follow = currentModel.getNewState();
         states.add(follow);
-        nextState = follow;
-        currentModel.addTransition(presentState, follow, trans);
+        transitionEnd = follow;
+        currentModel.addTransition(transitionStart, follow, trans);
         // add false branch stmts
         for (Stmt stmt : ifElseStmt.getElseStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        // add epsilon transition after false branch
-        State next = currentModel.getNewState();
-        states.add(next);
-        updatePresentState(nextState);
-        EpsilonTransition falseTransition = EpsilonTransition.get();
-        currentModel.addTransition(presentState, next, falseTransition);
-        // add epsilon transition after true branch
-        State endOfTrueBranch = states.get(lastTrueBranchIndex - 1);
-        updatePresentState(endOfTrueBranch);
-        EpsilonTransition trueTransition = EpsilonTransition.get();
-        currentModel.addTransition(presentState, next, trueTransition);
-        nextState = next;
+        // the next state currently is the end of the false branch
+        setTransitionStartTo(transitionEnd);
+        joinBranches(endOfTrueBranchStateId);
     }
 
     /**
@@ -539,34 +520,59 @@ public class AUMVisitor implements ScratchVisitor {
     @Override
     public void visit(IfThenStmt ifThenStmt) {
         // add control stmt
-        updatePresentState(nextState);
-        addTransition(presentState, ifThenStmt.getUniqueName());
-        // save index of state after control stmt
-        int afterIfStmtIndex = nextState.getId();
-        // add epsilon transition for true branch
-        updatePresentState(nextState);
-        EpsilonTransition transition = EpsilonTransition.get();
-        State followUpState = currentModel.getFollowUpState(presentState, transition);
-        states.add(followUpState);
-        currentModel.addTransition(presentState, followUpState, transition);
-        nextState = followUpState;
+        int afterIfStmtIndex = addTrueBranch(ifThenStmt.getUniqueName());
         // add true branch stmts
         for (Stmt stmt : ifThenStmt.getThenStmts().getStmts().getListOfStmt()) {
             stmt.accept(this);
         }
-        int endOfTrueBranchStateId = nextState.getId();
-        // add epsilon transition after false branch
-        State next = currentModel.getNewState();
-        states.add(next);
-        updatePresentState(states.get(afterIfStmtIndex - 1));
+        int endOfTrueBranchStateId = transitionEnd.getId();
+        // the end of the true branch is the state after the if stmt
+        setTransitionStartTo(states.get(afterIfStmtIndex - 1));
+        joinBranches(endOfTrueBranchStateId);
+    }
+
+    /**
+     * Joins the two branches to end in one state by adding the state and
+     * epsilon transitions to it.
+     * The present state has to be set to the end of the false branch before
+     * calling this method.
+     *
+     * @param endOfTrueBranchStateId Id of the state at the end of the true
+     *                               branch.
+     */
+    private void joinBranches(int endOfTrueBranchStateId) {
+        State join = currentModel.getNewState();
+        states.add(join);
         EpsilonTransition falseTransition = EpsilonTransition.get();
-        currentModel.addTransition(presentState, next, falseTransition);
-        nextState = next;
+        currentModel.addTransition(transitionStart, join, falseTransition);
         // add epsilon transition after true branch
         State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
-        updatePresentState(endOfTrueBranch);
+        setTransitionStartTo(endOfTrueBranch);
         EpsilonTransition trueTransition = EpsilonTransition.get();
-        currentModel.addTransition(presentState, nextState, trueTransition);
+        currentModel.addTransition(transitionStart, join, trueTransition);
+        transitionEnd = join;
+    }
+
+    /**
+     * Adds the if statement and the epsilon transition for the true branch to
+     * the current model.
+     *
+     * @param ifName Name of the if statement.
+     * @return The id of the state after the if statement.
+     */
+    private int addTrueBranch(String ifName) {
+        setTransitionStartTo(transitionEnd);
+        addTransition(transitionStart, ifName);
+        // save index of state after control stmt
+        int afterIfStmtIndex = transitionEnd.getId();
+        // add epsilon transition for true branch
+        setTransitionStartTo(transitionEnd);
+        EpsilonTransition transition = EpsilonTransition.get();
+        State followUpState = currentModel.getFollowUpState(transitionStart, transition);
+        states.add(followUpState);
+        currentModel.addTransition(transitionStart, followUpState, transition);
+        transitionEnd = followUpState;
+        return afterIfStmtIndex;
     }
 
     /**
@@ -576,8 +582,8 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtName Name of the statement causing this transition.
      */
     private void addTransitionContextAware(String stmtName) {
-        updatePresentState(nextState);
-        addTransition(presentState, stmtName);
+        setTransitionStartTo(transitionEnd);
+        addTransition(transitionStart, stmtName);
     }
 
     /**
@@ -592,7 +598,7 @@ public class AUMVisitor implements ScratchVisitor {
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
         State followUpState = currentModel.getFollowUpState(presentState, transition);
         states.add(followUpState);
-        nextState = followUpState;
+        transitionEnd = followUpState;
         currentModel.addTransition(presentState, followUpState, transition);
     }
 }
