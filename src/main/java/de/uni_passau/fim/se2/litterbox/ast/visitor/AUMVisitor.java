@@ -188,7 +188,7 @@ public class AUMVisitor implements ScratchVisitor {
                         new ObjectOutputStream(fileOutput);
                 objectOutput.writeInt(modelsToSerialize.size());
                 for (Model model : modelsToSerialize) {
-                    //model.minimize(); TODO do I need this
+                    model.minimize();
                     objectOutput.writeInt(model2id.get(model));
                     objectOutput.writeObject(model);
                 }
