@@ -55,6 +55,16 @@ public class AUMExtractor {
      */
     private static int scriptsAnalysed = 0;
 
+    /**
+     * Number of procedure definitions present in the analysed json files.
+     */
+    private static int procDefsPresent = 0;
+
+    /**
+     * Number of analysed procedure definitions.
+     */
+    private static int procDefsAnalysed = 0;
+
    /* static {
         try {
             Handler handler = new FileHandler("AUMExtractor.log");
@@ -97,10 +107,28 @@ public class AUMExtractor {
         scriptsAnalysed++;
     }
 
-//    public static void main(String[] args) {
-//        AUMExtractor e = new AUMExtractor();
-//        e.createActorUsageModels("/home/nina/Schreibtisch/test/test3/", "/home/nina/bachelor-thesis/test-out/");
-//    }
+    /**
+     * This method should be called whenever analysis of a new script is
+     * starting.  This ensures that the number of scripts present is correct.
+     */
+    public static void newProcDefPresent() {
+        procDefsPresent++;
+    }
+
+    /**
+     * This method should be called whenever analysis of a new script is
+     * completed without errors. This ensures that the number of scripts
+     * analysed is correct.
+     */
+    public static void newProcDefAnalysed() {
+        procDefsAnalysed++;
+    }
+
+
+    public static void main(String[] args) {
+        AUMExtractor e = new AUMExtractor();
+        e.createActorUsageModels("/home/nina/Studium/bachelor-thesis/projects/test/IfElseTest", "/home/nina/bachelor-thesis/test-out/");
+    }
     /**
      * Creates actor usage models for the given scratch programs.
      *
@@ -173,6 +201,7 @@ public class AUMExtractor {
             int totalProjects = skippedDueToAUMExtractor + skippedDueToParsing + successfullyAnalysed;
             System.out.println("Projects analysed/present: " + successfullyAnalysed + "/" + totalProjects);
             System.out.println("Scripts analysed/present: " + scriptsAnalysed + "/" + scriptsPresent);
+            System.out.println("Procedure definitions analysed/present: " + procDefsAnalysed + "/" + procDefsPresent);
             System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
             visitor.shutdownAnalysis();
         }
