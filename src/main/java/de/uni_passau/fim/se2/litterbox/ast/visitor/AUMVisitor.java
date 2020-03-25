@@ -563,14 +563,28 @@ public class AUMVisitor implements ScratchVisitor {
         addTransitionContextAware(stmtName);
         int repeatStateIndex = transitionEnd.getId();
         List<Stmt> listOfStmt = stmtList.getStmts().getListOfStmt();
-        for (Stmt stmt : listOfStmt) {
+        boolean repeatForever = false;
+        boolean termination = false;
+        for (int i = 0; i < listOfStmt.size(); i++) {
+            Stmt stmt = listOfStmt.get(i);
+            if (i == listOfStmt.size() - 1) {
+                if (stmt instanceof RepeatForeverStmt) {
+                    repeatForever = true;
+                } else if (stmt instanceof TerminationStmt) {
+                    termination = true;
+                }
+            }
             stmt.accept(this);
         }
-        setTransitionStartTo(transitionEnd);
-        EpsilonTransition transition = EpsilonTransition.get();
-        State repeatState = states.get(repeatStateIndex - 1);
-        currentModel.addTransition(transitionStart, repeatState, transition);
-        transitionEnd = repeatState;
+        if (!repeatForever && !termination) {
+            setTransitionStartTo(transitionEnd);
+            EpsilonTransition transition = EpsilonTransition.get();
+            State repeatState = states.get(repeatStateIndex - 1);
+            currentModel.addTransition(transitionStart, repeatState, transition);
+            transitionEnd = repeatState;
+        } else if (termination) {
+            statesToExit.add(transitionEnd.getId());
+        }
     }
 
     /**
