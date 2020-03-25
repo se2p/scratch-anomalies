@@ -97,6 +97,10 @@ public class AUMExtractor {
         scriptsAnalysed++;
     }
 
+//    public static void main(String[] args) {
+//        AUMExtractor e = new AUMExtractor();
+//        e.createActorUsageModels("/home/nina/Schreibtisch/test/test3/", "/home/nina/bachelor-thesis/test-out/");
+//    }
     /**
      * Creates actor usage models for the given scratch programs.
      *

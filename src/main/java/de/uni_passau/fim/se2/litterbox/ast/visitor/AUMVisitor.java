@@ -24,12 +24,17 @@ import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
 import de.uni_passau.fim.se2.litterbox.ast.model.StmtList;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
+import de.uni_passau.fim.se2.litterbox.ast.model.event.GreenFlag;
+import de.uni_passau.fim.se2.litterbox.ast.model.event.StartedAsClone;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.common.ChangeVariableBy;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfElseStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfThenStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatForeverStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatTimesStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.UntilStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.spritelook.Hide;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.spritelook.Show;
 import org.softevo.oumextractor.modelcreator1.ModelData;
 import org.softevo.oumextractor.modelcreator1.model.EpsilonTransition;
 import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
@@ -218,6 +223,14 @@ public class AUMVisitor implements ScratchVisitor {
         id2modelData.put(modelsCreated, new ModelData(
                 programName + "." + currentActorName,
                 SCRIPT + modelsToSerialize.size() + "()V", ACTOR));
+//        if (currentActorName.equalsIgnoreCase("Life") && (modelsToSerialize.size() == 124)) {
+//            System.out.println(124);
+//            System.out.println(currentModel);
+//        }
+//        if (currentActorName.equalsIgnoreCase("Coin") && (modelsToSerialize.size() == 113)) {
+//            System.out.println(23);
+//            System.out.println(currentModel);
+//        }
         clear();
     }
 
