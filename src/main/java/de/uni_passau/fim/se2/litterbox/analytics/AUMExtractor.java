@@ -108,17 +108,18 @@ public class AUMExtractor {
     }
 
     /**
-     * This method should be called whenever analysis of a new script is
-     * starting.  This ensures that the number of scripts present is correct.
+     * This method should be called whenever analysis of a new procedure
+     * definition is starting. This ensures that the number of procedure
+     * definitions present is correct.
      */
     public static void newProcDefPresent() {
         procDefsPresent++;
     }
 
     /**
-     * This method should be called whenever analysis of a new script is
-     * completed without errors. This ensures that the number of scripts
-     * analysed is correct.
+     * This method should be called whenever analysis of a new procedure
+     * definition is completed without errors. This ensures that the number of
+     * procedure definitions analysed is correct.
      */
     public static void newProcDefAnalysed() {
         procDefsAnalysed++;
