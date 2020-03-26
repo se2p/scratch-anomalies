@@ -31,6 +31,8 @@ import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfThenStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatForeverStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatTimesStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.UntilStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.StopAll;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.StopThisScript;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.TerminationStmt;
 import org.softevo.oumextractor.modelcreator1.ModelData;
 import org.softevo.oumextractor.modelcreator1.model.EpsilonTransition;
@@ -570,7 +572,7 @@ public class AUMVisitor implements ScratchVisitor {
             if (i == listOfStmt.size() - 1) {
                 if (stmt instanceof RepeatForeverStmt) {
                     repeatForever = true;
-                } else if (stmt instanceof TerminationStmt) {
+                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
                     termination = true;
                 }
             }
@@ -604,7 +606,7 @@ public class AUMVisitor implements ScratchVisitor {
             if (i == trueBranchStmts.size() - 1) {
                 if (stmt instanceof RepeatForeverStmt) {
                     repeatForeverEndOfTrue = true;
-                } else if (stmt instanceof TerminationStmt) {
+                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
                     terminationStmtEndOfTrue = true;
                 }
                 stmt.accept(this);
@@ -626,7 +628,7 @@ public class AUMVisitor implements ScratchVisitor {
             if (i == listOfStmt.size() - 1) {
                 if (stmt instanceof RepeatForeverStmt) {
                     repeatForeverEndOfFalse = true;
-                } else if (stmt instanceof TerminationStmt) {
+                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
                     terminationStmtEndOfFalse = true;
                 }
                 stmt.accept(this);
@@ -714,7 +716,7 @@ public class AUMVisitor implements ScratchVisitor {
             if (i == listOfStmt.size() - 1) {
                 if (stmt instanceof RepeatForeverStmt) {
                     repeatForeverEndOfTrue = true;
-                } else if (stmt instanceof TerminationStmt) {
+                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
                     terminationStmtEndOfTrue = true;
                 }
                 stmt.accept(this);
