@@ -232,16 +232,16 @@ public class AUMVisitor implements ScratchVisitor {
                 ObjectOutputStream objectOutput =
                         new ObjectOutputStream(fileOutput);
                 objectOutput.writeInt(modelsToSerialize.size());
-//                int i = 0;
+                int i = 0;
                 for (Model model : modelsToSerialize) {
-//                    i++;
-//                    System.out.println("Not minimized model");
-//                    System.out.println(model);
-//                    System.out.println();
-//                    System.out.println();
-//                    File dotFile = new File("AUM" + i + ".dot");
-//                    dotFile.createNewFile();
-//                    model.saveToDotFile(dotFile);
+                    i++;
+                    System.out.println("Not minimized model");
+                    System.out.println(model);
+                    System.out.println();
+                    System.out.println();
+                    File dotFile = new File("AUM_with_control" + i + ".dot");
+                    dotFile.createNewFile();
+                    model.saveToDotFile(dotFile);
                     model.minimize();
                     objectOutput.writeInt(model2id.get(model));
                     objectOutput.writeObject(model);
