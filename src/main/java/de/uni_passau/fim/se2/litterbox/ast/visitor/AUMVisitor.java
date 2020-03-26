@@ -481,28 +481,9 @@ public class AUMVisitor implements ScratchVisitor {
         setTransitionStartTo(currentModel.getEntryState());
         states.add(transitionStart);
         addTransition(transitionStart, procDef.getUniqueName());
+        // add the statements
         List<Stmt> listOfStmt = procDef.getStmtList().getStmts().getListOfStmt();
-        boolean lastIsForever = false;
-        for (int i = 0; i < listOfStmt.size(); i++) {
-            Stmt stmt = listOfStmt.get(i);
-            stmt.accept(this);
-            if (i == listOfStmt.size() - 1) {
-                if (stmt instanceof RepeatForeverStmt) {
-                    lastIsForever = true;
-                }
-            }
-        }
-        if (!lastIsForever) {
-            EpsilonTransition returnTransition = EpsilonTransition.get();
-            setTransitionStartTo(transitionEnd);
-            transitionEnd = currentModel.getExitState();
-            currentModel.addTransition(transitionStart, transitionEnd, returnTransition);
-        }
-        for (Integer integer : statesToExit) {
-            transitionEnd = currentModel.getExitState();
-            State state = states.get(integer - 1);
-            currentModel.addTransition(state, transitionEnd, EpsilonTransition.get());
-        }
+        addStmtList(listOfStmt);
         endProcDefAnalysis(new Model(currentModel));
     }
 
@@ -515,13 +496,25 @@ public class AUMVisitor implements ScratchVisitor {
     public void visit(Script script) {
         assert !endAnalysis;
         AUMExtractor.newScriptPresent();
+        // add the event transition
         script.getEvent().accept(this);
+        // add the statements
         List<Stmt> listOfStmt = script.getStmtList().getStmts().getListOfStmt();
+        addStmtList(listOfStmt);
+        endScriptAnalysis(new Model(currentModel));
+    }
+
+    /**
+     * Adds all the statements in the list to the current model.
+     *
+     * @param stmts List of statements to be added.
+     */
+    private void addStmtList(List<Stmt> stmts) {
         boolean lastIsForever = false;
-        for (int i = 0; i < listOfStmt.size(); i++) {
-            Stmt stmt = listOfStmt.get(i);
+        for (int i = 0; i < stmts.size(); i++) {
+            Stmt stmt = stmts.get(i);
             stmt.accept(this);
-            if (i == listOfStmt.size() - 1) {
+            if (i == stmts.size() - 1) {
                 if (stmt instanceof RepeatForeverStmt) {
                     lastIsForever = true;
                 }
@@ -533,12 +526,11 @@ public class AUMVisitor implements ScratchVisitor {
             transitionEnd = currentModel.getExitState();
             currentModel.addTransition(transitionStart, transitionEnd, returnTransition);
         }
-        transitionEnd = currentModel.getExitState();
         for (Integer integer : statesToExit) {
+            transitionEnd = currentModel.getExitState();
             State state = states.get(integer - 1);
             currentModel.addTransition(state, transitionEnd, EpsilonTransition.get());
         }
-        endScriptAnalysis(new Model(currentModel));
     }
 
     /**
