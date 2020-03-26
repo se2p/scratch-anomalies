@@ -232,16 +232,16 @@ public class AUMVisitor implements ScratchVisitor {
                 ObjectOutputStream objectOutput =
                         new ObjectOutputStream(fileOutput);
                 objectOutput.writeInt(modelsToSerialize.size());
-                int i = 0;
+//                int i = 0;
                 for (Model model : modelsToSerialize) {
-                    i++;
-                    System.out.println("Not minimized model");
-                    System.out.println(model);
-                    System.out.println();
-                    System.out.println();
-                    File dotfile = new File("normalTestmodel" + i + ".dot");
-                    dotfile.createNewFile();
-                    model.saveToDotFile(dotfile);
+//                    i++;
+//                    System.out.println("Not minimized model");
+//                    System.out.println(model);
+//                    System.out.println();
+//                    System.out.println();
+//                    File dotFile = new File("AUM" + i + ".dot");
+//                    dotFile.createNewFile();
+//                    model.saveToDotFile(dotFile);
                     model.minimize();
                     objectOutput.writeInt(model2id.get(model));
                     objectOutput.writeObject(model);
@@ -602,6 +602,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtName Name of the loop causing this transition.
      * @param stmtList List of statements contained in this loop.
      */
+    @SuppressWarnings("DuplicatedCode")
     private void addLoopTransitions(String stmtName, StmtList stmtList) {
         assert !endAnalysis;
         addTransitionContextAware(stmtName);
@@ -647,17 +648,7 @@ public class AUMVisitor implements ScratchVisitor {
             int afterIfStmtIndex = addTrueBranch(ifElseStmt.getUniqueName());
             // add true branch stmts
             List<Stmt> trueBranchStmts = ifElseStmt.getStmtList().getStmts().getListOfStmt();
-            for (int i = 0; i < trueBranchStmts.size(); i++) {
-                Stmt stmt = trueBranchStmts.get(i);
-                if (i == trueBranchStmts.size() - 1) {
-                    if (stmt instanceof RepeatForeverStmt) {
-                        repeatForeverEndOfTrue = true;
-                    } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
-                        terminationStmtEndOfTrue = true;
-                    }
-                }
-                stmt.accept(this);
-            }
+            addStmts(trueBranchStmts);
             // save index of last state in true branch
             int endOfTrueBranchStateId = transitionEnd.getId();
             // add epsilon transition for the false branch
@@ -669,17 +660,7 @@ public class AUMVisitor implements ScratchVisitor {
             currentModel.addTransition(transitionStart, follow, trans);
             // add false branch stmts
             List<Stmt> listOfStmt = ifElseStmt.getElseStmts().getStmts().getListOfStmt();
-            for (int i = 0; i < listOfStmt.size(); i++) {
-                Stmt stmt = listOfStmt.get(i);
-                if (i == listOfStmt.size() - 1) {
-                    if (stmt instanceof RepeatForeverStmt) {
-                        repeatForeverEndOfFalse = true;
-                    } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
-                        terminationStmtEndOfFalse = true;
-                    }
-                }
-                stmt.accept(this);
-            }
+            addStmts(listOfStmt);
             // the next state currently is the end of the false branch
             setTransitionStartTo(transitionEnd);
             if (terminationStmtEndOfTrue && terminationStmtEndOfFalse
@@ -696,6 +677,26 @@ public class AUMVisitor implements ScratchVisitor {
             }
             repeatForeverEndOfTrue = false;
             terminationStmtEndOfTrue = false;
+        }
+    }
+
+    /**
+     * Adds the statements contained in the list to the model.
+     *
+     * @param listOfStmt List of statements.
+     */
+    @SuppressWarnings("DuplicatedCode")
+    private void addStmts(List<Stmt> listOfStmt) {
+        for (int i = 0; i < listOfStmt.size(); i++) {
+            Stmt stmt = listOfStmt.get(i);
+            if (i == listOfStmt.size() - 1) {
+                if (stmt instanceof RepeatForeverStmt) {
+                    repeatForeverEndOfFalse = true;
+                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
+                    terminationStmtEndOfFalse = true;
+                }
+            }
+            stmt.accept(this);
         }
     }
 
