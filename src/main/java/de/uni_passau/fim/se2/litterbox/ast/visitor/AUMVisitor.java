@@ -602,7 +602,6 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtName Name of the loop causing this transition.
      * @param stmtList List of statements contained in this loop.
      */
-    @SuppressWarnings("DuplicatedCode")
     private void addLoopTransitions(String stmtName, StmtList stmtList) {
         assert !endAnalysis;
         addTransitionContextAware(stmtName);
@@ -648,7 +647,17 @@ public class AUMVisitor implements ScratchVisitor {
             int afterIfStmtIndex = addTrueBranch(ifElseStmt.getUniqueName());
             // add true branch stmts
             List<Stmt> trueBranchStmts = ifElseStmt.getStmtList().getStmts().getListOfStmt();
-            addStmts(trueBranchStmts);
+            for (int i = 0; i < trueBranchStmts.size(); i++) {
+                Stmt stmt = trueBranchStmts.get(i);
+                if (i == trueBranchStmts.size() - 1) {
+                    if (stmt instanceof RepeatForeverStmt) {
+                        repeatForeverEndOfTrue = true;
+                    } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
+                        terminationStmtEndOfTrue = true;
+                    }
+                }
+                stmt.accept(this);
+            }
             // save index of last state in true branch
             int endOfTrueBranchStateId = transitionEnd.getId();
             // add epsilon transition for the false branch
@@ -660,7 +669,17 @@ public class AUMVisitor implements ScratchVisitor {
             currentModel.addTransition(transitionStart, follow, trans);
             // add false branch stmts
             List<Stmt> listOfStmt = ifElseStmt.getElseStmts().getStmts().getListOfStmt();
-            addStmts(listOfStmt);
+            for (int i = 0; i < listOfStmt.size(); i++) {
+                Stmt stmt = listOfStmt.get(i);
+                if (i == listOfStmt.size() - 1) {
+                    if (stmt instanceof RepeatForeverStmt) {
+                        repeatForeverEndOfFalse = true;
+                    } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
+                        terminationStmtEndOfFalse = true;
+                    }
+                }
+                stmt.accept(this);
+            }
             // the next state currently is the end of the false branch
             setTransitionStartTo(transitionEnd);
             if (terminationStmtEndOfTrue && terminationStmtEndOfFalse
@@ -677,26 +696,6 @@ public class AUMVisitor implements ScratchVisitor {
             }
             repeatForeverEndOfTrue = false;
             terminationStmtEndOfTrue = false;
-        }
-    }
-
-    /**
-     * Adds the statements contained in the list to the model.
-     *
-     * @param listOfStmt List of statements.
-     */
-    @SuppressWarnings("DuplicatedCode")
-    private void addStmts(List<Stmt> listOfStmt) {
-        for (int i = 0; i < listOfStmt.size(); i++) {
-            Stmt stmt = listOfStmt.get(i);
-            if (i == listOfStmt.size() - 1) {
-                if (stmt instanceof RepeatForeverStmt) {
-                    repeatForeverEndOfFalse = true;
-                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
-                    terminationStmtEndOfFalse = true;
-                }
-            }
-            stmt.accept(this);
         }
     }
 
