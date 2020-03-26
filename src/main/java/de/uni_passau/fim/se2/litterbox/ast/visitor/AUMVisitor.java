@@ -735,6 +735,7 @@ public class AUMVisitor implements ScratchVisitor {
             if (!repeatForeverEndOfTrue) {
                 if (join == null) {
                     join = currentModel.getNewState();
+                    states.add(join);
                 }
                 State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
                 setTransitionStartTo(endOfTrueBranch);
