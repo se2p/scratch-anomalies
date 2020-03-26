@@ -39,7 +39,6 @@ import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
 import org.softevo.oumextractor.modelcreator1.model.MethodCall;
 import org.softevo.oumextractor.modelcreator1.model.Model;
 import org.softevo.oumextractor.modelcreator1.model.State;
-import org.softevo.oumextractor.modelcreator1.model.Transition;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -50,7 +49,6 @@ import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -84,6 +82,11 @@ public class AUMVisitor implements ScratchVisitor {
      * Constant used for script naming.
      */
     private static final String SCRIPT = "script";
+
+    /**
+     * Constant used for procedure definition naming.
+     */
+    private static final String PROC_DEF = "procedure";
 
     /**
      * Directory to store the models into.
@@ -260,7 +263,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     public void endProcDefAnalysis(Model toAdd) {
         AUMExtractor.newProcDefAnalysed();
-        endAnalysis(toAdd, procDefName);
+        endAnalysis(toAdd, procDefName, PROC_DEF);
         procDefName = "";
     }
 
@@ -279,7 +282,7 @@ public class AUMVisitor implements ScratchVisitor {
 //            System.out.println(23);
 //            System.out.println(currentModel);
 //        }
-        endAnalysis(toAdd, SCRIPT);
+        endAnalysis(toAdd, SCRIPT, SCRIPT);
     }
 
     /**
@@ -289,16 +292,16 @@ public class AUMVisitor implements ScratchVisitor {
      * @param methodName The name of the script or procedure definition
      *                   analysis of which resulted in the model to add.
      */
-    private void endAnalysis(Model toAdd, String methodName) {
+    private void endAnalysis(Model toAdd, String methodName, String type) {
         for (int i = 0; i < states.size(); i++) {
             assert (i + 1 == states.get(i).getId());
         }
         modelsCreated++;
         modelsToSerialize.add(toAdd);
         model2id.put(toAdd, modelsCreated);
-        id2modelData.put(modelsCreated, new ModelData(
-                programName + "." + currentActorName,
-                methodName + modelsToSerialize.size(), ACTOR));
+        id2modelData.put(modelsCreated, new ModelData("program: " +
+                programName + " actor: " + currentActorName,
+                type + ": " + methodName + modelsToSerialize.size(), ACTOR));
         clear();
     }
 
