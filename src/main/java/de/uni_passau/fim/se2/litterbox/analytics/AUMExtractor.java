@@ -128,7 +128,7 @@ public class AUMExtractor {
 
     public static void main(String[] args) {
         AUMExtractor e = new AUMExtractor();
-        e.createActorUsageModels("/home/nina/Studium/bachelor-thesis/projects/test/TestNormal", "/home/nina/bachelor-thesis/test-out/");
+        e.createActorUsageModels("/home/nina/Studium/bachelor-thesis/projects/test/TestProcDef", "/home/nina/bachelor-thesis/test-out/");
     }
 
     /**

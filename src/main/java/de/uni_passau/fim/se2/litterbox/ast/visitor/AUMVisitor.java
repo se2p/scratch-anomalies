@@ -239,9 +239,9 @@ public class AUMVisitor implements ScratchVisitor {
                     System.out.println(model);
                     System.out.println();
                     System.out.println();
-                    File dotFile = new File("AUM_with_control" + i + ".dot");
-                    dotFile.createNewFile();
-                    model.saveToDotFile(dotFile);
+                    File dotfile = new File("procdef_with" + ".dot");
+                    dotfile.createNewFile();
+                    model.saveToDotFile(dotfile);
                     model.minimize();
                     objectOutput.writeInt(model2id.get(model));
                     objectOutput.writeObject(model);
@@ -481,16 +481,28 @@ public class AUMVisitor implements ScratchVisitor {
         setTransitionStartTo(currentModel.getEntryState());
         states.add(transitionStart);
         addTransition(transitionStart, procDef.getUniqueName());
-        // add the statements
-        for (Stmt stmt : procDef.getStmtList().getStmts().getListOfStmt()) {
+        List<Stmt> listOfStmt = procDef.getStmtList().getStmts().getListOfStmt();
+        boolean lastIsForever = false;
+        for (int i = 0; i < listOfStmt.size(); i++) {
+            Stmt stmt = listOfStmt.get(i);
             stmt.accept(this);
+            if (i == listOfStmt.size() - 1) {
+                if (stmt instanceof RepeatForeverStmt) {
+                    lastIsForever = true;
+                }
+            }
         }
-        // add return transition
-        EpsilonTransition returnTransition = EpsilonTransition.get();
-        setTransitionStartTo(transitionEnd);
-        transitionEnd = currentModel.getExitState();
-        currentModel.addTransition(transitionStart, transitionEnd, returnTransition);
-
+        if (!lastIsForever) {
+            EpsilonTransition returnTransition = EpsilonTransition.get();
+            setTransitionStartTo(transitionEnd);
+            transitionEnd = currentModel.getExitState();
+            currentModel.addTransition(transitionStart, transitionEnd, returnTransition);
+        }
+        for (Integer integer : statesToExit) {
+            transitionEnd = currentModel.getExitState();
+            State state = states.get(integer - 1);
+            currentModel.addTransition(state, transitionEnd, EpsilonTransition.get());
+        }
         endProcDefAnalysis(new Model(currentModel));
     }
 
