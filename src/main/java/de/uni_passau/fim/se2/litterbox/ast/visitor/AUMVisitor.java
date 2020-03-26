@@ -33,13 +33,13 @@ import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatTimesSt
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.UntilStmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.StopAll;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.StopThisScript;
-import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.TerminationStmt;
 import org.softevo.oumextractor.modelcreator1.ModelData;
 import org.softevo.oumextractor.modelcreator1.model.EpsilonTransition;
 import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
 import org.softevo.oumextractor.modelcreator1.model.MethodCall;
 import org.softevo.oumextractor.modelcreator1.model.Model;
 import org.softevo.oumextractor.modelcreator1.model.State;
+import org.softevo.oumextractor.modelcreator1.model.Transition;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -50,6 +50,7 @@ import java.io.ObjectOutputStream;
 import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
@@ -177,6 +178,11 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private List<Integer> statesToExit = new LinkedList<>();
 
+    /**
+     * If a blocking if statement occurs this is used to prevent further
+     * transitions to be added to the current model.
+     */
+    private boolean endAnalysis = false;
 
     /**
      * Creates a new instance of this visitor.
@@ -223,9 +229,16 @@ public class AUMVisitor implements ScratchVisitor {
                 ObjectOutputStream objectOutput =
                         new ObjectOutputStream(fileOutput);
                 objectOutput.writeInt(modelsToSerialize.size());
+                int i = 0;
                 for (Model model : modelsToSerialize) {
+                    i++;
                     System.out.println("Not minimized model");
                     System.out.println(model);
+                    System.out.println();
+                    System.out.println();
+                    File dotfile = new File("normalTestmodel" + i + ".dot");
+                    dotfile.createNewFile();
+                    model.saveToDotFile(dotfile);
                     model.minimize();
                     objectOutput.writeInt(model2id.get(model));
                     objectOutput.writeObject(model);
@@ -285,7 +298,7 @@ public class AUMVisitor implements ScratchVisitor {
         model2id.put(toAdd, modelsCreated);
         id2modelData.put(modelsCreated, new ModelData(
                 programName + "." + currentActorName,
-                methodName + modelsToSerialize.size() + "()V", ACTOR));
+                methodName + modelsToSerialize.size(), ACTOR));
         clear();
     }
 
@@ -294,6 +307,7 @@ public class AUMVisitor implements ScratchVisitor {
      * script which is analysed.
      */
     private void clear() {
+        endAnalysis = false;
         statesToExit.clear();
         states.clear();
         setTransitionStartTo(null);
@@ -419,6 +433,7 @@ public class AUMVisitor implements ScratchVisitor {
      *                          added.
      */
     private void setTransitionStartTo(State startOfTransition) {
+        assert !endAnalysis;
         transitionStart = startOfTransition;
     }
 
@@ -432,6 +447,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Program program) {
+        assert !endAnalysis;
         AUMExtractor.newProjectPresent();
         programName = program.getIdent().getName();
         for (ActorDefinition definition : program.getActorDefinitionList().getDefintions()) {
@@ -455,6 +471,7 @@ public class AUMVisitor implements ScratchVisitor {
      *                to be created.
      */
     public void visit(ProcedureDefinition procDef) {
+        assert !endAnalysis;
         AUMExtractor.newProcDefPresent();
         // add the procedure definition transition
         procDefName = procDef.getIdent().getName();
@@ -481,15 +498,27 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Script script) {
+        assert !endAnalysis;
         AUMExtractor.newScriptPresent();
         script.getEvent().accept(this);
-        for (Stmt stmt : script.getStmtList().getStmts().getListOfStmt()) {
+        List<Stmt> listOfStmt = script.getStmtList().getStmts().getListOfStmt();
+        boolean lastIsForever = false;
+        for (int i = 0; i < listOfStmt.size(); i++) {
+            Stmt stmt = listOfStmt.get(i);
             stmt.accept(this);
+            if (i == listOfStmt.size() - 1) {
+                if (stmt instanceof RepeatForeverStmt) {
+                    lastIsForever = true;
+                }
+            }
         }
-        EpsilonTransition returnTransition = EpsilonTransition.get();
-        setTransitionStartTo(transitionEnd);
+        if (!lastIsForever) {
+            EpsilonTransition returnTransition = EpsilonTransition.get();
+            setTransitionStartTo(transitionEnd);
+            transitionEnd = currentModel.getExitState();
+            currentModel.addTransition(transitionStart, transitionEnd, returnTransition);
+        }
         transitionEnd = currentModel.getExitState();
-        currentModel.addTransition(transitionStart, transitionEnd, returnTransition);
         for (Integer integer : statesToExit) {
             State state = states.get(integer - 1);
             currentModel.addTransition(state, transitionEnd, EpsilonTransition.get());
@@ -505,6 +534,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Event event) {
+        assert !endAnalysis;
         setTransitionStartTo(currentModel.getEntryState());
         states.add(transitionStart);
         addTransition(transitionStart, event.getUniqueName());
@@ -517,7 +547,9 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Stmt stmt) {
-        addTransitionContextAware(stmt.getUniqueName());
+        if (!endAnalysis) {
+            addTransitionContextAware(stmt.getUniqueName());
+        }
     }
 
     /**
@@ -528,7 +560,9 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(RepeatForeverStmt loop) {
-        addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
+        if (!endAnalysis) {
+            addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
+        }
     }
 
     /**
@@ -539,7 +573,9 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(RepeatTimesStmt loop) {
-        addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
+        if (!endAnalysis) {
+            addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
+        }
     }
 
     /**
@@ -550,7 +586,9 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(UntilStmt loop) {
-        addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
+        if (!endAnalysis) {
+            addLoopTransitions(loop.getUniqueName(), loop.getStmtList());
+        }
     }
 
     /**
@@ -562,6 +600,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtList List of statements contained in this loop.
      */
     private void addLoopTransitions(String stmtName, StmtList stmtList) {
+        assert !endAnalysis;
         addTransitionContextAware(stmtName);
         int repeatStateIndex = transitionEnd.getId();
         List<Stmt> listOfStmt = stmtList.getStmts().getListOfStmt();
@@ -586,6 +625,9 @@ public class AUMVisitor implements ScratchVisitor {
             transitionEnd = repeatState;
         } else if (termination) {
             statesToExit.add(transitionEnd.getId());
+            transitionEnd = states.get(repeatStateIndex - 1);
+        } else {
+            transitionEnd = states.get(repeatStateIndex - 1);
         }
     }
 
@@ -597,56 +639,61 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(IfElseStmt ifElseStmt) {
-        // add control stmt
-        int afterIfStmtIndex = addTrueBranch(ifElseStmt.getUniqueName());
-        // add true branch stmts
-        List<Stmt> trueBranchStmts = ifElseStmt.getStmtList().getStmts().getListOfStmt();
-        for (int i = 0; i < trueBranchStmts.size(); i++) {
-            Stmt stmt = trueBranchStmts.get(i);
-            if (i == trueBranchStmts.size() - 1) {
-                if (stmt instanceof RepeatForeverStmt) {
-                    repeatForeverEndOfTrue = true;
-                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
-                    terminationStmtEndOfTrue = true;
+        if (!endAnalysis) {
+            // add control stmt
+            int afterIfStmtIndex = addTrueBranch(ifElseStmt.getUniqueName());
+            // add true branch stmts
+            List<Stmt> trueBranchStmts = ifElseStmt.getStmtList().getStmts().getListOfStmt();
+            for (int i = 0; i < trueBranchStmts.size(); i++) {
+                Stmt stmt = trueBranchStmts.get(i);
+                if (i == trueBranchStmts.size() - 1) {
+                    if (stmt instanceof RepeatForeverStmt) {
+                        repeatForeverEndOfTrue = true;
+                    } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
+                        terminationStmtEndOfTrue = true;
+                    }
                 }
                 stmt.accept(this);
             }
-        }
-        // save index of last state in true branch
-        int endOfTrueBranchStateId = transitionEnd.getId();
-        // add epsilon transition for the false branch
-        transitionStart = states.get(afterIfStmtIndex - 1);
-        EpsilonTransition trans = EpsilonTransition.get();
-        State follow = currentModel.getNewState();
-        states.add(follow);
-        transitionEnd = follow;
-        currentModel.addTransition(transitionStart, follow, trans);
-        // add false branch stmts
-        List<Stmt> listOfStmt = ifElseStmt.getElseStmts().getStmts().getListOfStmt();
-        for (int i = 0; i < listOfStmt.size(); i++) {
-            Stmt stmt = listOfStmt.get(i);
-            if (i == listOfStmt.size() - 1) {
-                if (stmt instanceof RepeatForeverStmt) {
-                    repeatForeverEndOfFalse = true;
-                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
-                    terminationStmtEndOfFalse = true;
+            // save index of last state in true branch
+            int endOfTrueBranchStateId = transitionEnd.getId();
+            // add epsilon transition for the false branch
+            transitionStart = states.get(afterIfStmtIndex - 1);
+            EpsilonTransition trans = EpsilonTransition.get();
+            State follow = currentModel.getNewState();
+            states.add(follow);
+            transitionEnd = follow;
+            currentModel.addTransition(transitionStart, follow, trans);
+            // add false branch stmts
+            List<Stmt> listOfStmt = ifElseStmt.getElseStmts().getStmts().getListOfStmt();
+            for (int i = 0; i < listOfStmt.size(); i++) {
+                Stmt stmt = listOfStmt.get(i);
+                if (i == listOfStmt.size() - 1) {
+                    if (stmt instanceof RepeatForeverStmt) {
+                        repeatForeverEndOfFalse = true;
+                    } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
+                        terminationStmtEndOfFalse = true;
+                    }
                 }
                 stmt.accept(this);
             }
+            // the next state currently is the end of the false branch
+            setTransitionStartTo(transitionEnd);
+            if (terminationStmtEndOfTrue && terminationStmtEndOfFalse
+                    || repeatForeverEndOfTrue && repeatForeverEndOfFalse
+                    || terminationStmtEndOfTrue && repeatForeverEndOfFalse
+                    || repeatForeverEndOfTrue && terminationStmtEndOfFalse) {
+                // the if statement is blocking and the creation of this AUM
+                // should end
+                statesToExit.add(endOfTrueBranchStateId);
+                statesToExit.add(transitionEnd.getId());
+                endAnalysis = true;
+            } else {
+                joinBranches(endOfTrueBranchStateId);
+            }
+            repeatForeverEndOfTrue = false;
+            terminationStmtEndOfTrue = false;
         }
-        // the next state currently is the end of the false branch
-        setTransitionStartTo(transitionEnd);
-        if (terminationStmtEndOfTrue && terminationStmtEndOfFalse
-                || repeatForeverEndOfTrue && repeatForeverEndOfFalse
-                || terminationStmtEndOfTrue && repeatForeverEndOfFalse
-                || repeatForeverEndOfTrue && terminationStmtEndOfFalse) {
-            // FIXME end analysis
-            State newState = currentModel.getNewState();
-            transitionStart = newState;
-            states.add(newState);
-            transitionEnd = newState;
-        }
-        joinBranches(endOfTrueBranchStateId);
     }
 
     /**
@@ -659,6 +706,7 @@ public class AUMVisitor implements ScratchVisitor {
      *                               branch.
      */
     private void joinBranches(int endOfTrueBranchStateId) {
+        assert !endAnalysis;
         State join = null;
         // false transition
         if (terminationStmtEndOfFalse) {
@@ -694,9 +742,6 @@ public class AUMVisitor implements ScratchVisitor {
         if (join != null) {
             transitionEnd = join;
         }
-
-        repeatForeverEndOfTrue = false;
-        terminationStmtEndOfTrue = false;
     }
 
     /**
@@ -707,51 +752,53 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(IfThenStmt ifThenStmt) {
-        // add control stmt
-        int afterIfStmtIndex = addTrueBranch(ifThenStmt.getUniqueName());
-        // add true branch stmts
-        List<Stmt> listOfStmt = ifThenStmt.getThenStmts().getStmts().getListOfStmt();
-        for (int i = 0; i < listOfStmt.size(); i++) {
-            Stmt stmt = listOfStmt.get(i);
-            if (i == listOfStmt.size() - 1) {
-                if (stmt instanceof RepeatForeverStmt) {
-                    repeatForeverEndOfTrue = true;
-                } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
-                    terminationStmtEndOfTrue = true;
+        if (!endAnalysis) {
+            // add control stmt
+            int afterIfStmtIndex = addTrueBranch(ifThenStmt.getUniqueName());
+            // add true branch stmts
+            List<Stmt> listOfStmt = ifThenStmt.getThenStmts().getStmts().getListOfStmt();
+            for (int i = 0; i < listOfStmt.size(); i++) {
+                Stmt stmt = listOfStmt.get(i);
+                if (i == listOfStmt.size() - 1) {
+                    if (stmt instanceof RepeatForeverStmt) {
+                        repeatForeverEndOfTrue = true;
+                    } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
+                        terminationStmtEndOfTrue = true;
+                    }
+                    stmt.accept(this);
                 }
-                stmt.accept(this);
             }
-        }
-        // save index of last state in true branch
-        int endOfTrueBranchStateId = transitionEnd.getId();
-        // add the false branch
-        setTransitionStartTo(states.get(afterIfStmtIndex - 1));
-        State join = currentModel.getNewState();
-        states.add(join);
-        EpsilonTransition falseTransition = EpsilonTransition.get();
-        currentModel.addTransition(transitionStart, join, falseTransition);
-        // add the true branch epsilon transition if there is neither a
-        // termination statement at the end nor a repeat forever loop
-        if (terminationStmtEndOfTrue) {
-            // add a transition to the exit state at the end of the AUM creation
-            statesToExit.add(endOfTrueBranchStateId);
-        } else {
-            if (!repeatForeverEndOfTrue) {
-                // add epsilon transition after true branch
-                State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
-                setTransitionStartTo(endOfTrueBranch);
-                EpsilonTransition trueTransition = EpsilonTransition.get();
-                currentModel.addTransition(transitionStart, join, trueTransition);
+            // save index of last state in true branch
+            int endOfTrueBranchStateId = transitionEnd.getId();
+            // add the false branch
+            setTransitionStartTo(states.get(afterIfStmtIndex - 1));
+            State join = currentModel.getNewState();
+            states.add(join);
+            EpsilonTransition falseTransition = EpsilonTransition.get();
+            currentModel.addTransition(transitionStart, join, falseTransition);
+            // add the true branch epsilon transition if there is neither a
+            // termination statement at the end nor a repeat forever loop
+            if (terminationStmtEndOfTrue) {
+                // add a transition to the exit state at the end of the AUM creation
+                statesToExit.add(endOfTrueBranchStateId);
+            } else {
+                if (!repeatForeverEndOfTrue) {
+                    // add epsilon transition after true branch
+                    State endOfTrueBranch = states.get(endOfTrueBranchStateId - 1);
+                    setTransitionStartTo(endOfTrueBranch);
+                    EpsilonTransition trueTransition = EpsilonTransition.get();
+                    currentModel.addTransition(transitionStart, join, trueTransition);
+                }
+                // else: there is a repeat forever stmt at the end of the true branch
+                // so do not add any further transitions
             }
-            // else: there is a repeat forever stmt at the end of the true branch
-            // so do not add any further transitions
-        }
-        // make sure the following transitions use the right transition end as
-        // new transition start
-        transitionEnd = join;
+            // make sure the following transitions use the right transition end as
+            // new transition start
+            transitionEnd = join;
 
-        repeatForeverEndOfTrue = false;
-        terminationStmtEndOfTrue = false;
+            repeatForeverEndOfTrue = false;
+            terminationStmtEndOfTrue = false;
+        }
     }
 
     /**
@@ -762,6 +809,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @return The id of the state after the if statement.
      */
     private int addTrueBranch(String ifName) {
+        assert !endAnalysis;
         setTransitionStartTo(transitionEnd);
         addTransition(transitionStart, ifName);
         // save index of state after control stmt
@@ -783,6 +831,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtName Name of the statement causing this transition.
      */
     private void addTransitionContextAware(String stmtName) {
+        assert !endAnalysis;
         setTransitionStartTo(transitionEnd);
         addTransition(transitionStart, stmtName);
     }
@@ -795,6 +844,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtName     The name of the block causing the transition.
      */
     private void addTransition(State presentState, String stmtName) {
+        assert !endAnalysis;
         MethodCall methodCall = new MethodCall(ACTOR, stmtName);
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
         State followUpState = currentModel.getFollowUpState(presentState, transition);
