@@ -151,26 +151,6 @@ public class AUMVisitor implements ScratchVisitor {
     private State transitionEnd;
 
     /**
-     * True if the last added statement on the true branch was a repeat forever.
-     */
-    private boolean repeatForeverEndOfTrue = false;
-
-    /**
-     * True if the last added statement on the false branch was a repeat forever.
-     */
-    private boolean repeatForeverEndOfFalse = false;
-
-    /**
-     * True if the last statement added on the true branch was a termination statement.
-     */
-    private boolean terminationStmtEndOfTrue = false;
-
-    /**
-     * True if the last statement added on the false branch was a termination statement.
-     */
-    private boolean terminationStmtEndOfFalse = false;
-
-    /**
      * Name of the currently analysed procedure definition.
      */
     private String procDefName = "";
@@ -188,13 +168,18 @@ public class AUMVisitor implements ScratchVisitor {
     private boolean endAnalysis = false;
 
     /**
+     * Location of the dot output files.
+     */
+    private String dotOutputPath;
+
+    /**
      * Creates a new instance of this visitor.
      *
      * @param pathToOutputDir Directory to hold the models.
      * @param programs        Names of all programs that will be processed.
      */
     @SuppressWarnings({"ResultOfMethodCallIgnored", "ConstantConditions"})
-    public AUMVisitor(String pathToOutputDir, Set<String> programs) {
+    public AUMVisitor(String pathToOutputDir, String dotOutputPath, Set<String> programs) {
         this.pathToOutputDir = pathToOutputDir;
         this.programs = programs;
         id2modelData = new HashMap<>();
@@ -203,6 +188,7 @@ public class AUMVisitor implements ScratchVisitor {
         modelsCreated = 0;
         currentModel = new Model();
         currentActorName = "";
+        this.dotOutputPath = dotOutputPath;
 
         // empty models dir
         File destDir = new File(this.pathToOutputDir);
@@ -232,16 +218,14 @@ public class AUMVisitor implements ScratchVisitor {
                 ObjectOutputStream objectOutput =
                         new ObjectOutputStream(fileOutput);
                 objectOutput.writeInt(modelsToSerialize.size());
-//                int i = 0;
+                int i = 0;
                 for (Model model : modelsToSerialize) {
-//                    i++;
-//                    System.out.println("Not minimized model");
-//                    System.out.println(model);
-//                    System.out.println();
-//                    System.out.println();
-//                    File dotfile = new File("procdef_with" + ".dot");
-//                    dotfile.createNewFile();
-//                    model.saveToDotFile(dotfile);
+                    i++;
+                    if (dotOutputPath != null) {
+                        File dotfile = new File(dotOutputPath, "aum-with" + i + ".dot");
+                        dotfile.createNewFile();
+                        model.saveToDotFile(dotfile);
+                    }
                     model.minimize();
                     objectOutput.writeInt(model2id.get(model));
                     objectOutput.writeObject(model);
@@ -453,12 +437,12 @@ public class AUMVisitor implements ScratchVisitor {
         assert !endAnalysis;
         AUMExtractor.newProjectPresent();
         programName = program.getIdent().getName();
-        for (ActorDefinition definition : program.getActorDefinitionList().getDefintions()) {
-            currentActorName = definition.getIdent().getName();
-            for (ProcedureDefinition procedureDefinition : definition.getProcedureDefinitionList().getList()) {
-                procedureDefinition.accept(this);
+        for (ActorDefinition def : program.getActorDefinitionList().getDefintions()) {
+            currentActorName = def.getIdent().getName();
+            for (ProcedureDefinition procDef : def.getProcedureDefinitionList().getList()) {
+                procDef.accept(this);
             }
-            for (Script script : definition.getScripts().getScriptList()) {
+            for (Script script : def.getScripts().getScriptList()) {
                 script.accept(this);
             }
             currentActorName = "";
@@ -611,20 +595,20 @@ public class AUMVisitor implements ScratchVisitor {
         addTransitionContextAware(stmtName);
         int repeatStateIndex = transitionEnd.getId();
         List<Stmt> listOfStmt = stmtList.getStmts().getListOfStmt();
-        boolean repeatForever = false;
+        boolean forever = false;
         boolean termination = false;
         for (int i = 0; i < listOfStmt.size(); i++) {
             Stmt stmt = listOfStmt.get(i);
+            stmt.accept(this);
             if (i == listOfStmt.size() - 1) {
                 if (stmt instanceof RepeatForeverStmt) {
-                    repeatForever = true;
+                    forever = true;
                 } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
                     termination = true;
                 }
             }
-            stmt.accept(this);
         }
-        if (!repeatForever && !termination) {
+        if (!forever && !termination) {
             setTransitionStartTo(transitionEnd);
             EpsilonTransition transition = EpsilonTransition.get();
             State repeatState = states.get(repeatStateIndex);
@@ -651,16 +635,18 @@ public class AUMVisitor implements ScratchVisitor {
             int afterIfStmtIndex = addTrueBranch(ifElseStmt.getUniqueName());
             // add true branch stmts
             List<Stmt> trueBranchStmts = ifElseStmt.getStmtList().getStmts().getListOfStmt();
+            boolean foreverTrue = false;
+            boolean terminationTrue = false;
             for (int i = 0; i < trueBranchStmts.size(); i++) {
                 Stmt stmt = trueBranchStmts.get(i);
+                stmt.accept(this);
                 if (i == trueBranchStmts.size() - 1) {
                     if (stmt instanceof RepeatForeverStmt) {
-                        repeatForeverEndOfTrue = true;
+                        foreverTrue = true;
                     } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
-                        terminationStmtEndOfTrue = true;
+                        terminationTrue = true;
                     }
                 }
-                stmt.accept(this);
             }
             // save index of last state in true branch
             int endOfTrueBranchStateId = transitionEnd.getId();
@@ -673,33 +659,34 @@ public class AUMVisitor implements ScratchVisitor {
             currentModel.addTransition(transitionStart, follow, trans);
             // add false branch stmts
             List<Stmt> listOfStmt = ifElseStmt.getElseStmts().getStmts().getListOfStmt();
+            boolean foreverFalse = false;
+            boolean terminationFalse = false;
             for (int i = 0; i < listOfStmt.size(); i++) {
                 Stmt stmt = listOfStmt.get(i);
+                stmt.accept(this);
                 if (i == listOfStmt.size() - 1) {
                     if (stmt instanceof RepeatForeverStmt) {
-                        repeatForeverEndOfFalse = true;
+                        foreverFalse = true;
                     } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
-                        terminationStmtEndOfFalse = true;
+                        terminationFalse = true;
                     }
                 }
-                stmt.accept(this);
             }
             // the next state currently is the end of the false branch
             setTransitionStartTo(transitionEnd);
-            if (terminationStmtEndOfTrue && terminationStmtEndOfFalse
-                    || repeatForeverEndOfTrue && repeatForeverEndOfFalse
-                    || terminationStmtEndOfTrue && repeatForeverEndOfFalse
-                    || repeatForeverEndOfTrue && terminationStmtEndOfFalse) {
+            if (terminationTrue && terminationFalse
+                    || foreverTrue && foreverFalse
+                    || terminationTrue && foreverFalse
+                    || foreverTrue && terminationFalse) {
                 // the if statement is blocking and the creation of this AUM
                 // should end
                 statesToExit.add(endOfTrueBranchStateId);
                 statesToExit.add(transitionEnd.getId());
                 endAnalysis = true;
             } else {
-                joinBranches(endOfTrueBranchStateId);
+                joinBranches(endOfTrueBranchStateId, foreverTrue, foreverFalse,
+                        terminationTrue, terminationFalse);
             }
-            repeatForeverEndOfTrue = false;
-            terminationStmtEndOfTrue = false;
         }
     }
 
@@ -712,14 +699,16 @@ public class AUMVisitor implements ScratchVisitor {
      * @param endOfTrueBranchStateId Id of the state at the end of the true
      *                               branch.
      */
-    private void joinBranches(int endOfTrueBranchStateId) {
+    private void joinBranches(int endOfTrueBranchStateId, boolean foreverTrue,
+                              boolean foreverFalse, boolean terminationTrue,
+                              boolean terminationFalse) {
         assert !endAnalysis;
         State join = null;
         // false transition
-        if (terminationStmtEndOfFalse) {
+        if (terminationFalse) {
             statesToExit.add(transitionStart.getId());
         } else {
-            if (!repeatForeverEndOfFalse) {
+            if (!foreverFalse) {
                 join = currentModel.getNewState();
                 states.put(join.getId(), join);
                 EpsilonTransition falseTransition = EpsilonTransition.get();
@@ -729,10 +718,10 @@ public class AUMVisitor implements ScratchVisitor {
             // so do not add any further transitions
         }
         // add epsilon transition after true branch
-        if (terminationStmtEndOfTrue) {
+        if (terminationTrue) {
             statesToExit.add(endOfTrueBranchStateId);
         } else {
-            if (!repeatForeverEndOfTrue) {
+            if (!foreverTrue) {
                 if (join == null) {
                     join = currentModel.getNewState();
                     states.put(join.getId(), join);
@@ -764,16 +753,18 @@ public class AUMVisitor implements ScratchVisitor {
             // add control stmt
             int afterIfStmtIndex = addTrueBranch(ifThenStmt.getUniqueName());
             // add true branch stmts
-            List<Stmt> listOfStmt = ifThenStmt.getThenStmts().getStmts().getListOfStmt();
-            for (int i = 0; i < listOfStmt.size(); i++) {
-                Stmt stmt = listOfStmt.get(i);
-                if (i == listOfStmt.size() - 1) {
+            boolean foreverEndOfTrue = false;
+            boolean terminationStmtEndOfTrue = false;
+            List<Stmt> trueBranchStmts = ifThenStmt.getThenStmts().getStmts().getListOfStmt();
+            for (int i = 0; i < trueBranchStmts.size(); i++) {
+                Stmt stmt = trueBranchStmts.get(i);
+                stmt.accept(this);
+                if (i == trueBranchStmts.size() - 1) {
                     if (stmt instanceof RepeatForeverStmt) {
-                        repeatForeverEndOfTrue = true;
+                        foreverEndOfTrue = true;
                     } else if (stmt instanceof StopAll || stmt instanceof StopThisScript) {
                         terminationStmtEndOfTrue = true;
                     }
-                    stmt.accept(this);
                 }
             }
             // save index of last state in true branch
@@ -790,7 +781,7 @@ public class AUMVisitor implements ScratchVisitor {
                 // add a transition to the exit state at the end of the AUM creation
                 statesToExit.add(endOfTrueBranchStateId);
             } else {
-                if (!repeatForeverEndOfTrue) {
+                if (!foreverEndOfTrue) {
                     // add epsilon transition after true branch
                     State endOfTrueBranch = states.get(endOfTrueBranchStateId);
                     setTransitionStartTo(endOfTrueBranch);
@@ -803,9 +794,6 @@ public class AUMVisitor implements ScratchVisitor {
             // make sure the following transitions use the right transition end as
             // new transition start
             transitionEnd = join;
-
-            repeatForeverEndOfTrue = false;
-            terminationStmtEndOfTrue = false;
         }
     }
 

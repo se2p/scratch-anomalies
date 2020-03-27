@@ -128,7 +128,7 @@ public class AUMExtractor {
 
     public static void main(String[] args) {
         AUMExtractor e = new AUMExtractor();
-        e.createActorUsageModels("/home/nina/Studium/bachelor-thesis/projects/test/TestProcDef", "/home/nina/bachelor-thesis/test-out/");
+        e.createActorUsageModels("/home/nina/Studium/bachelor-thesis/projects/test/TestProcDef", "/home/nina/bachelor-thesis/test-out/dotOutput/without-control/", "/home/nina/bachelor-thesis/test-out/");
     }
 
     /**
@@ -139,7 +139,7 @@ public class AUMExtractor {
      * @param pathToOutputFolder   Path to the folder in which the actor usage
      *                             models are created.
      */
-    public void createActorUsageModels(String pathToAnalysisFolder, String pathToOutputFolder) {
+    public void createActorUsageModels(String pathToAnalysisFolder, String dotOutputPath, String pathToOutputFolder) {
         File analysisFolder = new File(pathToAnalysisFolder);
         if (!analysisFolder.exists()) {
             logger.severe("Analysis folder does not exist: " + analysisFolder);
@@ -157,7 +157,7 @@ public class AUMExtractor {
                     programs.add(fileEntry.getName());
                 }
             }
-            AUMVisitor visitor = new AUMVisitor(pathToOutputFolder, programs);
+            AUMVisitor visitor = new AUMVisitor(pathToOutputFolder, dotOutputPath, programs);
             Set<Exception> exceptions = new HashSet<>();
             int successfullyAnalysed = 0;
             int skippedDueToParsing = 0;
