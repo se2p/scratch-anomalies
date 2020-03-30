@@ -222,7 +222,11 @@ public class AUMVisitor implements ScratchVisitor {
                 for (Model model : modelsToSerialize) {
                     i++;
                     if (dotOutputPath != null) {
-                        File dotfile = new File(dotOutputPath, "aum-with" + i + ".dot");
+                        File dir = new File(dotOutputPath);
+                        if (!dir.exists()) {
+                            dir.mkdirs();
+                        }
+                        File dotfile = new File(dotOutputPath + "aum-with" + i + ".dot");
                         dotfile.createNewFile();
                         model.saveToDotFile(dotfile);
                     }
