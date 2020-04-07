@@ -470,7 +470,7 @@ public class AUMVisitor implements ScratchVisitor {
         states.put(transitionStart.getId(), transitionStart);
         addTransition(transitionStart, procDef.getUniqueName());
         // add the statements
-        List<Stmt> listOfStmt = procDef.getStmtList().getStmts().getListOfStmt();
+        List<Stmt> listOfStmt = procDef.getStmtList().getStmts();
         addStmtList(listOfStmt);
         endProcDefAnalysis(new Model(currentModel));
     }
@@ -487,7 +487,7 @@ public class AUMVisitor implements ScratchVisitor {
         // add the event transition
         script.getEvent().accept(this);
         // add the statements
-        List<Stmt> listOfStmt = script.getStmtList().getStmts().getListOfStmt();
+        List<Stmt> listOfStmt = script.getStmtList().getStmts();
         addStmtList(listOfStmt);
         endScriptAnalysis(new Model(currentModel));
     }
@@ -598,7 +598,7 @@ public class AUMVisitor implements ScratchVisitor {
         assert !endAnalysis;
         addTransitionContextAware(stmtName);
         int repeatStateIndex = transitionEnd.getId();
-        List<Stmt> listOfStmt = stmtList.getStmts().getListOfStmt();
+        List<Stmt> listOfStmt = stmtList.getStmts();
         boolean forever = false;
         boolean termination = false;
         for (int i = 0; i < listOfStmt.size(); i++) {
@@ -638,7 +638,7 @@ public class AUMVisitor implements ScratchVisitor {
             // add control stmt
             int afterIfStmtIndex = addTrueBranch(ifElseStmt.getUniqueName());
             // add true branch stmts
-            List<Stmt> trueBranchStmts = ifElseStmt.getStmtList().getStmts().getListOfStmt();
+            List<Stmt> trueBranchStmts = ifElseStmt.getStmtList().getStmts();
             boolean foreverTrue = false;
             boolean terminationTrue = false;
             for (int i = 0; i < trueBranchStmts.size(); i++) {
@@ -662,7 +662,7 @@ public class AUMVisitor implements ScratchVisitor {
             transitionEnd = follow;
             currentModel.addTransition(transitionStart, follow, trans);
             // add false branch stmts
-            List<Stmt> listOfStmt = ifElseStmt.getElseStmts().getStmts().getListOfStmt();
+            List<Stmt> listOfStmt = ifElseStmt.getElseStmts().getStmts();
             boolean foreverFalse = false;
             boolean terminationFalse = false;
             for (int i = 0; i < listOfStmt.size(); i++) {
@@ -759,7 +759,7 @@ public class AUMVisitor implements ScratchVisitor {
             // add true branch stmts
             boolean foreverEndOfTrue = false;
             boolean terminationStmtEndOfTrue = false;
-            List<Stmt> trueBranchStmts = ifThenStmt.getThenStmts().getStmts().getListOfStmt();
+            List<Stmt> trueBranchStmts = ifThenStmt.getThenStmts().getStmts();
             for (int i = 0; i < trueBranchStmts.size(); i++) {
                 Stmt stmt = trueBranchStmts.get(i);
                 stmt.accept(this);
