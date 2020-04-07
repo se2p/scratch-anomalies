@@ -19,42 +19,18 @@
 package de.uni_passau.fim.se2.litterbox.ast.visitor;
 
 import de.uni_passau.fim.se2.litterbox.analytics.AUMExtractor;
-import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
-import de.uni_passau.fim.se2.litterbox.ast.model.Program;
-import de.uni_passau.fim.se2.litterbox.ast.model.Script;
-import de.uni_passau.fim.se2.litterbox.ast.model.StmtList;
+import de.uni_passau.fim.se2.litterbox.ast.model.*;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
 import de.uni_passau.fim.se2.litterbox.ast.model.procedure.ProcedureDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
-import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfElseStmt;
-import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.IfThenStmt;
-import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatForeverStmt;
-import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.RepeatTimesStmt;
-import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.UntilStmt;
+import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.*;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.StopAll;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.StopThisScript;
 import org.softevo.oumextractor.modelcreator1.ModelData;
-import org.softevo.oumextractor.modelcreator1.model.EpsilonTransition;
-import org.softevo.oumextractor.modelcreator1.model.InvokeMethodTransition;
-import org.softevo.oumextractor.modelcreator1.model.MethodCall;
-import org.softevo.oumextractor.modelcreator1.model.Model;
-import org.softevo.oumextractor.modelcreator1.model.State;
+import org.softevo.oumextractor.modelcreator1.model.*;
 
-import java.io.BufferedOutputStream;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.ObjectOutputStream;
-import java.io.PrintStream;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.io.*;
+import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -103,7 +79,6 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private final Set<Model> modelsToSerialize;
 
-
     /**
      * Mapping model id number => model data.
      */
@@ -131,7 +106,7 @@ public class AUMVisitor implements ScratchVisitor {
     private String currentActorName;
 
     /**
-     * Model of the currently processed script.
+     * Model of the currently processed script or procedure definition.
      */
     private Model currentModel;
 
@@ -149,11 +124,6 @@ public class AUMVisitor implements ScratchVisitor {
      * The state which will be used as end point for the next transition.
      */
     private State transitionEnd;
-
-    /**
-     * Name of the currently analysed procedure definition.
-     */
-    private String procDefName = "";
 
     /**
      * List storing all the indexes of states which have to be connected to the
@@ -249,10 +219,9 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Called after analysis of a procedure definition is done.
      */
-    public void endProcDefAnalysis(Model toAdd) {
+    public void endProcDefAnalysis(Model toAdd, String procDefId) {
         AUMExtractor.newProcDefAnalysed();
-        endAnalysis(toAdd, procDefName, PROC_DEF);
-        procDefName = "";
+        endAnalysis(toAdd, procDefId, PROC_DEF);
     }
 
     /**
@@ -260,27 +229,19 @@ public class AUMVisitor implements ScratchVisitor {
      *
      * @param toAdd The model to be added to the models to serialise.
      */
-    public void endScriptAnalysis(Model toAdd) {
+    public void endScriptAnalysis(Model toAdd, String scriptId) {
         AUMExtractor.newScriptAnalysed();
-//        if (currentActorName.equalsIgnoreCase("Life") && (modelsToSerialize.size() == 124)) {
-//            System.out.println(124);
-//            System.out.println(currentModel);
-//        }
-//        if (currentActorName.equalsIgnoreCase("Coin") && (modelsToSerialize.size() == 113)) {
-//            System.out.println(23);
-//            System.out.println(currentModel);
-//        }
-        endAnalysis(toAdd, SCRIPT, SCRIPT);
+        endAnalysis(toAdd, scriptId, SCRIPT);
     }
 
     /**
      * Called after analysis of both scripts and procedure definitions is done.
      *
-     * @param toAdd      The model to be added to the models to serialise.
-     * @param methodName The name of the script or procedure definition
-     *                   analysis of which resulted in the model to add.
+     * @param toAdd    The model to be added to the models to serialise.
+     * @param methodId The id of the script or procedure definition
+     *                 analysis of which resulted in the model to add.
      */
-    private void endAnalysis(Model toAdd, String methodName, String type) {
+    private void endAnalysis(Model toAdd, String methodId, String type) {
         for (Integer id : states.keySet()) {
             assert (id == states.get(id).getId());
         }
@@ -289,7 +250,7 @@ public class AUMVisitor implements ScratchVisitor {
         model2id.put(toAdd, modelsCreated);
         id2modelData.put(modelsCreated, new ModelData("program: " +
                 programName + " actor: " + currentActorName,
-                type + ": " + methodName + modelsToSerialize.size(), ACTOR));
+                type + ": " + methodId, ACTOR));
         clear();
     }
 
@@ -410,7 +371,6 @@ public class AUMVisitor implements ScratchVisitor {
     public void rollbackAnalysis(Model currentModel) {
         clear();
         currentActorName = "";
-        procDefName = "";
         if (currentModel != null) {
             modelsToSerialize.remove(currentModel);
             model2id.remove(currentModel);
@@ -465,14 +425,13 @@ public class AUMVisitor implements ScratchVisitor {
         assert !endAnalysis;
         AUMExtractor.newProcDefPresent();
         // add the procedure definition transition
-        procDefName = procDef.getIdent().getName();
         setTransitionStartTo(currentModel.getEntryState());
         states.put(transitionStart.getId(), transitionStart);
         addTransition(transitionStart, procDef.getUniqueName());
         // add the statements
         List<Stmt> listOfStmt = procDef.getStmtList().getStmts();
         addStmtList(listOfStmt);
-        endProcDefAnalysis(new Model(currentModel));
+        endProcDefAnalysis(new Model(currentModel), procDef.getIdent().getName());
     }
 
     /**
@@ -489,7 +448,7 @@ public class AUMVisitor implements ScratchVisitor {
         // add the statements
         List<Stmt> listOfStmt = script.getStmtList().getStmts();
         addStmtList(listOfStmt);
-        endScriptAnalysis(new Model(currentModel));
+        endScriptAnalysis(new Model(currentModel), script.getId());
     }
 
     /**

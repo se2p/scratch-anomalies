@@ -26,11 +26,13 @@ public class Script extends AbstractNode {
 
     private final Event event;
     private final StmtList stmtList;
+    private final String id;
 
-    public Script(Event event, StmtList stmtList) {
+    public Script(Event event, StmtList stmtList, String id) {
         super(event, stmtList);
         this.event = Preconditions.checkNotNull(event);
         this.stmtList = Preconditions.checkNotNull(stmtList);
+        this.id = id;
     }
 
     public Event getEvent() {
@@ -39,6 +41,10 @@ public class Script extends AbstractNode {
 
     public StmtList getStmtList() {
         return stmtList;
+    }
+
+    public String getId() {
+        return id;
     }
 
     @Override
