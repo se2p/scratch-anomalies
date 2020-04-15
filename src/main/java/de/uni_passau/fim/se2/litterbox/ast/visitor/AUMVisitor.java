@@ -19,7 +19,10 @@
 package de.uni_passau.fim.se2.litterbox.ast.visitor;
 
 import de.uni_passau.fim.se2.litterbox.analytics.AUMExtractor;
-import de.uni_passau.fim.se2.litterbox.ast.model.*;
+import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
+import de.uni_passau.fim.se2.litterbox.ast.model.Program;
+import de.uni_passau.fim.se2.litterbox.ast.model.Script;
+import de.uni_passau.fim.se2.litterbox.ast.model.StmtList;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
 import de.uni_passau.fim.se2.litterbox.ast.model.procedure.ProcedureDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
@@ -67,7 +70,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Directory to store the models into.
      */
-    private String pathToOutputDir;
+    private final String pathToOutputDir;
 
     /**
      * Names of all programs to be analysed by this visitor.
@@ -77,7 +80,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Models to serialize during next serialization.
      */
-    private final Set<Model> modelsToSerialize;
+    private Set<Model> modelsToSerialize;
 
     /**
      * Mapping model id number => model data.
@@ -87,11 +90,10 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Mapping model => model id.
      */
-    private final Map<Model, Integer> model2id;
+    private Map<Model, Integer> model2id;
 
     /**
-     * Number of models created by this analyzer. Used to generate model id.
-     * Is the same as the amount of scripts analysed.
+     * Number of models created by this analyser. Used to generate model id.
      */
     private int modelsCreated;
 
@@ -140,7 +142,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Location of the dot output files.
      */
-    private String dotOutputPath;
+    private final String dotOutputPath;
 
     /**
      * Creates a new instance of this visitor.
@@ -192,13 +194,7 @@ public class AUMVisitor implements ScratchVisitor {
                 for (Model model : modelsToSerialize) {
                     i++;
                     if (dotOutputPath != null) {
-                        File dir = new File(dotOutputPath);
-                        if (!dir.exists()) {
-                            dir.mkdirs();
-                        }
-                        File dotfile = new File(dotOutputPath + "aum-with" + i + ".dot");
-                        dotfile.createNewFile();
-                        model.saveToDotFile(dotfile);
+                        saveToDotfile(i, model);
                     }
                     model.minimize();
                     objectOutput.writeInt(model2id.get(model));
@@ -212,8 +208,22 @@ public class AUMVisitor implements ScratchVisitor {
         }
 
         // empty the set of models to be serialized
-        modelsToSerialize.clear();
-        model2id.clear();
+        modelsToSerialize = new HashSet<>();
+        model2id = new HashMap<>();
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private void saveToDotfile(int i, Model model) throws IOException {
+        File dir = new File(dotOutputPath);
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        for (File entry : dir.listFiles()) {
+            entry.delete();
+        }
+        File dotfile = new File(dotOutputPath + "aum-with" + i + ".dot");
+        dotfile.createNewFile();
+        model.saveToDotFile(dotfile);
     }
 
     /**
@@ -260,8 +270,8 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private void clear() {
         endAnalysis = false;
-        statesToExit.clear();
-        states.clear();
+        statesToExit = new LinkedList<>();
+        states = new HashMap<>();
         setTransitionStartTo(null);
         transitionEnd = null;
         currentModel = new Model();
@@ -366,15 +376,15 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     /**
-     * Called when analysis of a script produces results in an exception.
+     * Called when analysis of a script results in an exception.
      */
-    public void rollbackAnalysis(Model currentModel) {
-        clear();
+    public void rollbackAnalysis() {
         currentActorName = "";
         if (currentModel != null) {
             modelsToSerialize.remove(currentModel);
             model2id.remove(currentModel);
         }
+        clear();
     }
 
     /**

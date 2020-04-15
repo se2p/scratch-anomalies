@@ -83,7 +83,7 @@ public class AUMExtractor {
     }
 
     /**
-     * This method should be called whenever analysis of a project is starting.
+     * This method should be called whenever the analysis of a project is starting.
      * This ensures that the number of projects present is correct.
      */
     public static void newProjectPresent() {
@@ -91,15 +91,15 @@ public class AUMExtractor {
     }
 
     /**
-     * This method should be called whenever analysis of a new script is
-     * starting.  This ensures that the number of scripts present is correct.
+     * This method should be called whenever the analysis of a new script is
+     * starting. This ensures that the number of scripts present is correct.
      */
     public static void newScriptPresent() {
         scriptsPresent++;
     }
 
     /**
-     * This method should be called whenever analysis of a new script is
+     * This method should be called whenever analysis of a new script
      * completed without errors. This ensures that the number of scripts
      * analysed is correct.
      */
@@ -108,7 +108,7 @@ public class AUMExtractor {
     }
 
     /**
-     * This method should be called whenever analysis of a new procedure
+     * This method should be called whenever the analysis of a new procedure
      * definition is starting. This ensures that the number of procedure
      * definitions present is correct.
      */
@@ -117,7 +117,7 @@ public class AUMExtractor {
     }
 
     /**
-     * This method should be called whenever analysis of a new procedure
+     * This method should be called whenever the analysis of a new procedure
      * definition is completed without errors. This ensures that the number of
      * procedure definitions analysed is correct.
      */
@@ -125,7 +125,9 @@ public class AUMExtractor {
         procDefsAnalysed++;
     }
 
-
+    /**
+     * Helper method to create dot output for the specified programs.
+     */
     public static void main(String[] args) {
         AUMExtractor e = new AUMExtractor();
         e.createActorUsageModels("/home/nina/Studium/bachelor-thesis/projects/test/ControlTerminationTest", "/home/nina/Studium/bachelor-thesis/test-out/dotOutput/refactored-with-control/", "/home/nina/Studium/bachelor-thesis/test-out/");
@@ -136,6 +138,8 @@ public class AUMExtractor {
      *
      * @param pathToAnalysisFolder Path to the folder containing the scratch
      *                             programs to analyse.
+     * @param dotOutputPath        Path to the folder in which the dot files of the
+     *                             actor usage models are created.
      * @param pathToOutputFolder   Path to the folder in which the actor usage
      *                             models are created.
      */
@@ -144,21 +148,10 @@ public class AUMExtractor {
         if (!analysisFolder.exists()) {
             logger.severe("Analysis folder does not exist: " + analysisFolder);
         } else {
-            File outputFolder = new File(pathToOutputFolder);
-            if (!outputFolder.exists()) {
-                logger.info("Creating output folder: " + pathToOutputFolder);
-                if (!outputFolder.mkdirs()) {
-                    logger.severe("Failed to create output folder: " + pathToOutputFolder);
-                }
-            }
-            Set<String> programs = new HashSet<>();
-            for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
-                if ((FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json")) {
-                    programs.add(fileEntry.getName());
-                }
-            }
+            createOutFolders(pathToOutputFolder, dotOutputPath);
+            Set<String> programs = getPrograms(analysisFolder);
             AUMVisitor visitor = new AUMVisitor(pathToOutputFolder, dotOutputPath, programs);
-            Set<Exception> exceptions = new HashSet<>();
+            Set<Exception> exceptions = new HashSet<>(); //TODO print exceptions to file immediately instead of collecting them
             int successfullyAnalysed = 0;
             int skippedDueToParsing = 0;
             int skippedDueToAUMExtractor = 0;
@@ -186,26 +179,62 @@ public class AUMExtractor {
                         skippedDueToAUMExtractor++;
                         exceptions.add(e);
                         logger.severe("Creating AUM for the project failed.");
-                        visitor.rollbackAnalysis(null);
+                        visitor.rollbackAnalysis();
                     }
                 }
             }
-            System.out.println("\n\n\n\n%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-            System.out.println("EXCEPTIONS WHICH OCCURRED");
-            for (Exception exception : exceptions) {
-                exception.printStackTrace();
-            }
-            System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
-            System.out.println("Skipped due to parsing: " + skippedDueToParsing + " projects.");
-            System.out.println("Skipped during creation of AUMs: " + skippedDueToAUMExtractor + " projects.");
-            System.out.println("Total number of exceptions which occurred: " + exceptions.size());
-            System.out.println("Projects for which analysis started: " + projectsPresent);
-            int totalProjects = skippedDueToAUMExtractor + skippedDueToParsing + successfullyAnalysed;
-            System.out.println("Projects analysed/present: " + successfullyAnalysed + "/" + totalProjects);
-            System.out.println("Scripts analysed/present: " + scriptsAnalysed + "/" + scriptsPresent);
-            System.out.println("Procedure definitions analysed/present: " + procDefsAnalysed + "/" + procDefsPresent);
-            System.out.println("%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%");
+            printSummary(exceptions, successfullyAnalysed, skippedDueToParsing, skippedDueToAUMExtractor);
             visitor.shutdownAnalysis();
         }
+    }
+
+    private Set<String> getPrograms(File analysisFolder) {
+        Set<String> programs = new HashSet<>();
+        for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
+            if ((FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json")) {
+                programs.add(fileEntry.getName());
+            }
+        }
+        return programs;
+    }
+
+    private void createOutFolders(String pathToOutputFolder, String dotOutputPath) {
+        File outputFolder = new File(pathToOutputFolder);
+        if (!outputFolder.exists()) {
+            logger.info("Creating output folder: " + pathToOutputFolder);
+            if (!outputFolder.mkdirs()) {
+                logger.severe("Failed to create output folder: " + pathToOutputFolder);
+            }
+        }
+        File dotOutputFolder = new File(dotOutputPath);
+        if (!dotOutputFolder.exists()) {
+            logger.info("Creating dot output folder: " + dotOutputPath);
+            if (!dotOutputFolder.mkdirs()) {
+                logger.severe("Failed to create dot output folder: " + dotOutputPath);
+            }
+        }
+    }
+
+    private void printSummary(Set<Exception> exceptions, int successfullyAnalysed, int skippedDueToParsing, int skippedDueToAUMExtractor) {
+        System.out.println("\n\n\n");
+        String separator = "%".repeat(121);
+        System.out.println(separator);
+        System.out.println("EXCEPTIONS WHICH OCCURRED");
+        for (Exception exception : exceptions) {
+            exception.printStackTrace();
+        }
+        System.out.println(separator);
+        System.out.println("Skipped due to parsing: " + skippedDueToParsing + " projects.");
+        System.out.println("Skipped during creation of AUMs: " + skippedDueToAUMExtractor + " projects.");
+        System.out.println("Total number of exceptions which occurred: " + exceptions.size());
+        System.out.println("Projects for which analysis started: " + projectsPresent);
+        int totalProjects = skippedDueToAUMExtractor + skippedDueToParsing + successfullyAnalysed;
+        System.out.println("Projects analysed/present: " + successfullyAnalysed + "/" + totalProjects);
+        System.out.println("Scripts analysed/present: " + scriptsAnalysed + "/" + scriptsPresent);
+        System.out.println("Procedure definitions analysed/present: " + procDefsAnalysed + "/" + procDefsPresent);
+        System.out.println(separator);
+        // TODO add number of models
+        // TODO print to file
+        // TODO add time needed & paths
     }
 }
