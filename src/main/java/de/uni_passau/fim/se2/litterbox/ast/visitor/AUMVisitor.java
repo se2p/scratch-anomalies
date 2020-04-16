@@ -563,6 +563,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param stmtName Name of the loop causing this transition.
      * @param stmtList List of statements contained in this loop.
      */
+    @SuppressWarnings("DuplicatedCode")
     private void addLoopTransitions(String stmtName, StmtList stmtList) {
         assert !endAnalysis;
         addTransitionContextAware(stmtName);
@@ -601,6 +602,7 @@ public class AUMVisitor implements ScratchVisitor {
      *
      * @param ifElseStmt The statement causing the transition.
      */
+    @SuppressWarnings("DuplicatedCode")
     @Override
     public void visit(IfElseStmt ifElseStmt) {
         if (!endAnalysis) {
@@ -720,6 +722,7 @@ public class AUMVisitor implements ScratchVisitor {
      *
      * @param ifThenStmt The statement causing the transition.
      */
+    @SuppressWarnings("DuplicatedCode")
     @Override
     public void visit(IfThenStmt ifThenStmt) {
         if (!endAnalysis) {
