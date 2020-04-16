@@ -70,7 +70,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Prefix for the generated dotfiles.
      */
-    public static final String DOTFILE_PREFIX = "aum-without";
+    public static final String DOTFILE_PREFIX = "aum-with";
 
     /**
      * File extension for dotfiles.
