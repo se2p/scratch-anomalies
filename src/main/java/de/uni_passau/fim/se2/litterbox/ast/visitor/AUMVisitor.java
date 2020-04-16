@@ -171,6 +171,10 @@ public class AUMVisitor implements ScratchVisitor {
         }
     }
 
+    public int getModelsExtracted() {
+        return modelsCreated;
+    }
+
     /**
      * Serialises models created since the last serialisation (or since the
      * beginning of the analysis, if this is the first serialisation) until
@@ -326,7 +330,6 @@ public class AUMVisitor implements ScratchVisitor {
         // fill the index
         List<Integer> ids =
                 new ArrayList<>(id2modelData.keySet());
-        System.out.println(ids.size() + " MODELS EXTRACTED");
         Collections.sort(ids);
         for (Integer id : ids) {
             ModelData modelData = id2modelData.get(id);

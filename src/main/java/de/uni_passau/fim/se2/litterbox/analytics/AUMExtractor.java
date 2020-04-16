@@ -183,7 +183,7 @@ public class AUMExtractor {
                     }
                 }
             }
-            printSummary(exceptions, successfullyAnalysed, skippedDueToParsing, skippedDueToAUMExtractor);
+            printSummary(exceptions, successfullyAnalysed, skippedDueToParsing, skippedDueToAUMExtractor, visitor.getModelsExtracted());
             visitor.shutdownAnalysis();
         }
     }
@@ -215,7 +215,7 @@ public class AUMExtractor {
         }
     }
 
-    private void printSummary(Set<Exception> exceptions, int successfullyAnalysed, int skippedDueToParsing, int skippedDueToAUMExtractor) {
+    private void printSummary(Set<Exception> exceptions, int successfullyAnalysed, int skippedDueToParsing, int skippedDueToAUMExtractor, int modelsExtracted) {
         System.out.println("\n\n\n");
         String separator = "%".repeat(121);
         System.out.println(separator);
@@ -232,8 +232,8 @@ public class AUMExtractor {
         System.out.println("Projects analysed/present: " + successfullyAnalysed + "/" + totalProjects);
         System.out.println("Scripts analysed/present: " + scriptsAnalysed + "/" + scriptsPresent);
         System.out.println("Procedure definitions analysed/present: " + procDefsAnalysed + "/" + procDefsPresent);
+        System.out.println("Models created: " + modelsExtracted);
         System.out.println(separator);
-        // TODO add number of models
         // TODO print to file
         // TODO add time needed & paths
     }
