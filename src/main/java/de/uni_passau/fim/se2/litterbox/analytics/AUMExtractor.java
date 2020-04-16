@@ -209,8 +209,8 @@ public class AUMExtractor {
      * @throws FileNotFoundException If creation of the output streams fails.
      */
     private void initStreams(String outputFolderPath) throws FileNotFoundException {
-        summaryStream = new PrintStream(new FileOutputStream(outputFolderPath + "summary.txt"));
-        exceptionsStream = new PrintStream(new FileOutputStream(outputFolderPath + "exceptions.txt"));
+        summaryStream = new PrintStream(new FileOutputStream(outputFolderPath + File.separator + "summary.txt"));
+        exceptionsStream = new PrintStream(new FileOutputStream(outputFolderPath + File.separator + "exceptions.txt"));
         exceptionsStream.println("Exceptions of another successful LitterBox AUMExtractor run:");
         exceptionsStream.println("Start of analysis: " + start.format(DateTimeFormatter.ISO_DATE)
                 + " " + start.format(DateTimeFormatter.ISO_TIME));
