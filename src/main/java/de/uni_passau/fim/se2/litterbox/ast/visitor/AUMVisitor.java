@@ -68,6 +68,16 @@ public class AUMVisitor implements ScratchVisitor {
     private static final String PROC_DEF = "procedure";
 
     /**
+     * Prefix for the generated dotfiles.
+     */
+    public static final String DOTFILE_PREFIX = "aum-with";
+
+    /**
+     * File extension for dotfiles.
+     */
+    public static final String DOTFILE_EXTENSION = ".dot";
+
+    /**
      * Location of the dot output files.
      */
     private final String dotOutputPath;
@@ -75,7 +85,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Directory to store the models into.
      */
-    private final String pathToOutputDir;
+    private final String outputFolderPath;
 
     /**
      * Names of all programs to be analysed by this visitor.
@@ -85,38 +95,40 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Mapping model id number => model data.
      */
-    private final Map<Integer, ModelData> id2modelData;
+    private final Map<Integer, ModelData> id2modelData = new HashMap<>();
+
+    private final AUMExtractor extractor;
 
     /**
      * Models to serialise during next serialisation.
      */
-    private Set<Model> modelsToSerialise;
+    private Set<Model> modelsToSerialise = new HashSet<>();
 
     /**
      * Mapping model => model id of the models to serialise during next
      * serialisation.
      */
-    private Map<Model, Integer> model2id;
+    private Map<Model, Integer> model2id = new HashMap<>();
 
     /**
      * Number of models created by this analyser. Used to generate model id.
      */
-    private int modelsCreated;
+    private int modelsCreated = 0;
 
     /**
      * Name of the program currently analysed.
      */
-    private String programName;
+    private String programName = "";
 
     /**
      * Name of the current actor the scripts of which are analysed currently.
      */
-    private String currentActorName;
+    private String currentActorName = "";
 
     /**
      * Model of the currently processed script or procedure definition.
      */
-    private Model currentModel;
+    private Model currentModel = new Model();
 
     /**
      * Mapping id => state of the current model.
@@ -148,29 +160,22 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Creates a new instance of this visitor.
      *
-     * @param pathToOutputDir Directory to hold the models.
-     * @param programs        Names of all programs that will be processed.
+     * @param extractor The {@link AUMExtractor} instance this visitor belongs to.
      */
-    @SuppressWarnings({"ResultOfMethodCallIgnored", "ConstantConditions"})
-    public AUMVisitor(String pathToOutputDir, String dotOutputPath, Set<String> programs) {
-        this.pathToOutputDir = pathToOutputDir;
-        this.programs = programs;
-        id2modelData = new HashMap<>();
-        model2id = new HashMap<>();
-        modelsToSerialise = new HashSet<>();
-        modelsCreated = 0;
-        currentModel = new Model();
-        currentActorName = "";
-        this.dotOutputPath = dotOutputPath;
-
-        // empty models dir
-        File destDir = new File(this.pathToOutputDir);
-        destDir.mkdirs();
-        for (File file : destDir.listFiles()) {
-            file.delete();
-        }
+    @SuppressWarnings({"ConstantConditions"})
+    public AUMVisitor(AUMExtractor extractor) {
+        this.extractor = extractor;
+        this.programs = extractor.getPrograms();
+        this.dotOutputPath = extractor.getDotOutputPath();
+        this.outputFolderPath = extractor.getOutputFolderPath();
     }
 
+    /**
+     * Returns the total number of models extracted by this visitor,
+     * not only since the last serialisation.
+     *
+     * @return The total number of models extracted by this visitor.
+     */
     public int getModelsExtracted() {
         return modelsCreated;
     }
@@ -187,7 +192,7 @@ public class AUMVisitor implements ScratchVisitor {
         // serialise models if necessary
         if (modelsToSerialise.size() > 0) {
             try {
-                String fileName = pathToOutputDir + "/" + programName + ".models.ser";
+                String fileName = outputFolderPath + "/" + programName + ".models.ser";
                 File file = new File(fileName);
                 file.createNewFile();
                 BufferedOutputStream fileOutput = new BufferedOutputStream(
@@ -217,16 +222,17 @@ public class AUMVisitor implements ScratchVisitor {
         model2id = new HashMap<>();
     }
 
+    /**
+     * Creates a new file with the dot representation of the model.
+     * Files that are present in the folder are deleted before the first save operation.
+     *
+     * @param i     Counter for file names.
+     * @param model The model to save in dot representation.
+     * @throws IOException If file operations fail.
+     */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void saveToDotfile(int i, Model model) throws IOException {
-        File dir = new File(dotOutputPath);
-        if (!dir.exists()) {
-            dir.mkdirs();
-        }
-        for (File entry : dir.listFiles()) {
-            entry.delete();
-        }
-        File dotfile = new File(dotOutputPath + "aum-with" + i + ".dot");
+    private void saveToDotfile(int i, Model model) throws IOException { // TODO save with unique identifier for model?
+        File dotfile = new File(dotOutputPath + DOTFILE_PREFIX + i + DOTFILE_EXTENSION);
         dotfile.createNewFile();
         model.saveToDotFile(dotfile);
     }
@@ -235,7 +241,7 @@ public class AUMVisitor implements ScratchVisitor {
      * Called after analysis of a procedure definition is done.
      */
     public void endProcDefAnalysis(Model toAdd, String procDefId) {
-        AUMExtractor.newProcDefAnalysed();
+        extractor.newProcDefAnalysed();
         endAnalysis(toAdd, procDefId, PROC_DEF);
     }
 
@@ -245,7 +251,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param toAdd The model to be added to the models to serialise.
      */
     public void endScriptAnalysis(Model toAdd, String scriptId) {
-        AUMExtractor.newScriptAnalysed();
+        extractor.newScriptAnalysed();
         endAnalysis(toAdd, scriptId, SCRIPT);
     }
 
@@ -288,7 +294,7 @@ public class AUMVisitor implements ScratchVisitor {
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void shutdownAnalysis() {
         // serialise models info
-        File targetDirectory = new File(pathToOutputDir);
+        File targetDirectory = new File(outputFolderPath);
         targetDirectory.mkdirs();
         try {
             String fileName = "modelsdata.ser";
@@ -413,7 +419,7 @@ public class AUMVisitor implements ScratchVisitor {
     @Override
     public void visit(Program program) {
         assert !endAnalysis;
-        AUMExtractor.newProjectPresent();
+        extractor.newProjectPresent();
         programName = program.getIdent().getName();
         for (ActorDefinition def : program.getActorDefinitionList().getDefintions()) {
             currentActorName = def.getIdent().getName();
@@ -437,7 +443,7 @@ public class AUMVisitor implements ScratchVisitor {
      */
     public void visit(ProcedureDefinition procDef) {
         assert !endAnalysis;
-        AUMExtractor.newProcDefPresent();
+        extractor.newProcDefPresent();
         // add the procedure definition transition
         setTransitionStartTo(currentModel.getEntryState());
         states.put(transitionStart.getId(), transitionStart);
@@ -456,7 +462,7 @@ public class AUMVisitor implements ScratchVisitor {
     @Override
     public void visit(Script script) {
         assert !endAnalysis;
-        AUMExtractor.newScriptPresent();
+        extractor.newScriptPresent();
         // add the event transition
         script.getEvent().accept(this);
         // add the statements

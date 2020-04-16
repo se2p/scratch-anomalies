@@ -25,6 +25,12 @@ import de.uni_passau.fim.se2.litterbox.ast.visitor.AUMVisitor;
 import org.apache.commons.io.FilenameUtils;
 
 import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.PrintStream;
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -41,52 +47,229 @@ public class AUMExtractor {
     private final static Logger logger = Logger.getLogger(AUMExtractor.class.getName());
 
     /**
+     * Start time of the analysis.
+     */
+    private final LocalDateTime start = LocalDateTime.now();
+
+    /**
+     * Folder in which the programs AUMs of which are to be created are.
+     */
+    private final File analysisFolder;
+
+    /**
+     * Destination for the AUMs and the modelsdata, typesnames, index, summary and
+     * exceptions files.
+     */
+    private final File outputFolder;
+
+    /**
+     * Path to a folder in which the dotfile representation of the AUMs has to be
+     * stored. Null if no dotfile output is requested.
+     */
+    private final String dotOutputPath;
+
+    /**
+     * The stream for printing the summary of the analysis.
+     */
+    private PrintStream summaryStream;
+
+    /**
+     * The stream for printing the stack traces of the analysis.
+     */
+    private PrintStream exceptionsStream;
+
+    /**
+     * The names of all programs in the analysis folder.
+     * This information is necessary for JADET.
+     */
+    private Set<String> programs;
+
+    /**
+     * The visitor used for creating the AUMs.
+     */
+    private final AUMVisitor visitor;
+
+    /**
      * Number of projects present.
      */
-    private static int projectsPresent = 0;
+    private int projectsPresent = 0;
 
     /**
      * Number of scripts present in the analysed json files.
      */
-    private static int scriptsPresent = 0;
+    private int scriptsPresent = 0;
 
     /**
      * Number of analysed scripts.
      */
-    private static int scriptsAnalysed = 0;
+    private int scriptsAnalysed = 0;
 
     /**
      * Number of procedure definitions present in the analysed json files.
      */
-    private static int procDefsPresent = 0;
+    private int procDefsPresent = 0;
 
     /**
      * Number of analysed procedure definitions.
      */
-    private static int procDefsAnalysed = 0;
-
-   /* static {
-        try {
-            Handler handler = new FileHandler("AUMExtractor.log");
-            handler.setFormatter(new SimpleFormatter());
-            AUMExtractor.logger.addHandler(handler);
-            AUMExtractor.logger.setLevel(Level.ALL);
-        } catch (IOException e) {
-            System.err.println("[ERROR] Couldn't open log file");
-        }
-    }*/
+    private int procDefsAnalysed = 0;
 
     /**
-     * Creates new instance of this class.
+     * Number of programs which were analysed successfully.
      */
-    public AUMExtractor() {
+    private int successfullyAnalysed = 0;
+
+    /**
+     * Number of programs analysis of which did not succeed because the
+     * parsing failed.
+     */
+    private int skippedDueToParsing = 0;
+
+    /**
+     * Number of programs analysis of which did not succeed because of an exception
+     * in the {@code visitor}.
+     */
+    private int skippedDueToAUMExtractor = 0;
+
+    /**
+     * Number of programs which were processed already, regardless of the result.
+     */
+    private int programsProcessed = 0;
+
+    /**
+     * Number of exceptions which occurred during parsing and creation of the
+     * AUMs.
+     */
+    private int exceptionsOccurred = 0;
+
+    /**
+     * Makes sure the analysis folder exists and sets up everything else:
+     * Creates and empties the output folder(s), sets the set of program names
+     * for the visitor and sets up the streams for summary and exception output.
+     *
+     * @param analysisFolderPath Path to the folder containing the scratch
+     *                           programs to analyse.
+     * @param dotOutputPath      Path to the folder in which the dot files of the
+     *                           actor usage models are created.
+     * @param aumOutputPath      Path to the folder in which the actor usage
+     *                           models are created.
+     */
+    public AUMExtractor(String analysisFolderPath, String dotOutputPath, String aumOutputPath) throws FileNotFoundException {
+        this.dotOutputPath = dotOutputPath;
+
+        analysisFolder = new File(analysisFolderPath);
+        outputFolder = new File(aumOutputPath);
+        if (!analysisFolder.exists()) {
+            String msg = "Analysis folder does not exist: " + analysisFolder;
+            logger.severe(msg);
+            throw new RuntimeException(msg);
+        } else {
+            prepareOutFolders();
+            initStreams(aumOutputPath);
+            setPrograms();
+            visitor = new AUMVisitor(this);
+        }
+    }
+
+    /**
+     * Creates all non-existing required output folders and deletes any files
+     * which is present in the output folders.
+     */
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    private void prepareOutFolders() {
+        if (!outputFolder.exists()) {
+            String outputPath = outputFolder.getAbsolutePath();
+            logger.info("Creating output folder: " + outputPath);
+            if (!outputFolder.mkdirs()) {
+                logger.severe("Failed to create output folder: " + outputPath);
+            }
+        }
+        for (File file : outputFolder.listFiles()) {
+            file.delete();
+        }
+        if (dotOutputPath != null) {
+            File dotOutputFolder = new File(dotOutputPath);
+            if (!dotOutputFolder.exists()) {
+                logger.info("Creating dot output folder: " + dotOutputPath);
+                if (!dotOutputFolder.mkdirs()) {
+                    logger.severe("Failed to create dot output folder: " + dotOutputPath);
+                }
+            }
+            for (File file : dotOutputFolder.listFiles()) {
+                file.delete();
+            }
+        }
+    }
+
+    /**
+     * Initialises the print streams for the summary and exceptions file.
+     *
+     * @param outputFolderPath The path to the output folder.
+     * @throws FileNotFoundException If creation of the output streams fails.
+     */
+    private void initStreams(String outputFolderPath) throws FileNotFoundException {
+        summaryStream = new PrintStream(new FileOutputStream(outputFolderPath + "summary.txt"));
+        exceptionsStream = new PrintStream(new FileOutputStream(outputFolderPath + "exceptions.txt"));
+        exceptionsStream.println("Exceptions of another successful LitterBox AUMExtractor run:");
+        exceptionsStream.println("Start of analysis: " + start.format(DateTimeFormatter.ISO_DATE)
+                + " " + start.format(DateTimeFormatter.ISO_TIME));
+        exceptionsStream.println();
+    }
+
+    /**
+     * Adds all json files to the {@code programs}.
+     */
+    private void setPrograms() {
+        programs = new HashSet<>();
+        for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
+            if (isJson(fileEntry)) {
+                programs.add(fileEntry.getName());
+            }
+        }
+    }
+
+    /**
+     * Checks whether this file is a JSON file.
+     *
+     * @param fileEntry The file to be checked.
+     * @return {@code true} iff the file is a JSON file.
+     */
+    private boolean isJson(File fileEntry) {
+        return (FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json");
+    }
+
+    /**
+     * Returns the path to the folder in which the dot files should be stored.
+     * Is null if dot output is not requested.
+     *
+     * @return The path to the folder in which the dot files should be stored.
+     */
+    public String getDotOutputPath() {
+        return dotOutputPath;
+    }
+
+    /**
+     * Returns the path to the destination for the AUMs and the modelsdata,
+     * typesnames, index, summary and exceptions files.
+     *
+     * @return The path of the output folder of {@code this}.
+     */
+    public String getOutputFolderPath() {
+        return outputFolder.getAbsolutePath();
+    }
+
+    /**
+     * Returns the names of all programs in the analysis folder.
+     */
+    public Set<String> getPrograms() {
+        return programs;
     }
 
     /**
      * This method should be called whenever the analysis of a project is starting.
      * This ensures that the number of projects present is correct.
      */
-    public static void newProjectPresent() {
+    public void newProjectPresent() {
         projectsPresent++;
     }
 
@@ -94,7 +277,7 @@ public class AUMExtractor {
      * This method should be called whenever the analysis of a new script is
      * starting. This ensures that the number of scripts present is correct.
      */
-    public static void newScriptPresent() {
+    public void newScriptPresent() {
         scriptsPresent++;
     }
 
@@ -103,7 +286,7 @@ public class AUMExtractor {
      * completed without errors. This ensures that the number of scripts
      * analysed is correct.
      */
-    public static void newScriptAnalysed() {
+    public void newScriptAnalysed() {
         scriptsAnalysed++;
     }
 
@@ -112,7 +295,7 @@ public class AUMExtractor {
      * definition is starting. This ensures that the number of procedure
      * definitions present is correct.
      */
-    public static void newProcDefPresent() {
+    public void newProcDefPresent() {
         procDefsPresent++;
     }
 
@@ -121,120 +304,164 @@ public class AUMExtractor {
      * definition is completed without errors. This ensures that the number of
      * procedure definitions analysed is correct.
      */
-    public static void newProcDefAnalysed() {
+    public void newProcDefAnalysed() {
         procDefsAnalysed++;
     }
 
     /**
-     * Helper method to create dot output for the specified programs.
+     * Creates actor usage models for the scratch programs in the analysis folder.
      */
-    public static void main(String[] args) {
-        AUMExtractor e = new AUMExtractor();
-        e.createActorUsageModels("/home/nina/Studium/bachelor-thesis/projects/test/ControlTerminationTest", "/home/nina/Studium/bachelor-thesis/test-out/dotOutput/refactored-with-control/", "/home/nina/Studium/bachelor-thesis/test-out/");
+    public void runAnalysis() {
+        for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
+            if (isJson(fileEntry)) {
+                programsProcessed++;
+                int percentProcessed = (100 * programsProcessed / programs.size());
+                System.out.println("Analysing " + programsProcessed + "/" + programs.size() + " ("
+                        + percentProcessed + "% done): " + fileEntry.getName());
+                Program program = parseProgramFromFile(fileEntry);
+                if (program != null) {
+                    createActorUsageModels(program, fileEntry);
+                }
+            }
+        }
+        endAnalysis();
     }
 
     /**
-     * Creates actor usage models for the given scratch programs.
+     * Parses the program in the file.
      *
-     * @param pathToAnalysisFolder Path to the folder containing the scratch
-     *                             programs to analyse.
-     * @param dotOutputPath        Path to the folder in which the dot files of the
-     *                             actor usage models are created.
-     * @param pathToOutputFolder   Path to the folder in which the actor usage
-     *                             models are created.
+     * @param fileEntry The JSON file of a Scratch program.
+     * @return The
      */
-    public void createActorUsageModels(String pathToAnalysisFolder, String dotOutputPath, String pathToOutputFolder) {
-        File analysisFolder = new File(pathToAnalysisFolder);
-        if (!analysisFolder.exists()) {
-            logger.severe("Analysis folder does not exist: " + analysisFolder);
+    private Program parseProgramFromFile(File fileEntry) {
+        Program program;
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            program = ProgramParser.parseProgram(fileEntry.getName(), mapper.readTree(fileEntry));
+        } catch (Exception e) {
+            skippedDueToParsing++;
+            exceptionsOccurred++;
+            printException(fileEntry, e);
+            logger.severe("Unable to parse project: " + fileEntry.getAbsolutePath());
+            return null;
+        }
+        return program;
+    }
+
+    /**
+     * Creates AUMs for every script and procedure definition of the program.
+     *
+     * @param program   The program which is analysed.
+     * @param fileEntry The file of the program.
+     */
+    private void createActorUsageModels(Program program, File fileEntry) {
+        try {
+            program.accept(visitor);
+            successfullyAnalysed++;
+        } catch (Exception e) {
+            skippedDueToAUMExtractor++;
+            exceptionsOccurred++;
+            printException(fileEntry, e);
+            logger.severe("Creating AUM for the project failed.");
+            visitor.rollbackAnalysis();
+        }
+    }
+
+    /**
+     * Prints the name of the program in which an exception occurred and the
+     * stacktrace of the exception.
+     *
+     * @param program The program analysis of which resulted in an exception.
+     * @param e       The exception which was thrown during analysis of the program.
+     */
+    private void printException(File program, Exception e) {
+        exceptionsStream.println(program.getName());
+        e.printStackTrace(exceptionsStream);
+        exceptionsStream.println();
+    }
+
+    /**
+     * Serialises all relevant information and prints the summary to both the
+     * summary stream and the console.
+     */
+    private void endAnalysis() {
+        visitor.shutdownAnalysis();
+        System.out.println();
+        printSummary(System.out);
+        printSummary(summaryStream);
+        summaryStream.close();
+        exceptionsStream.close();
+    }
+
+    /**
+     * Prints the duration, paths and stats of this analysis to the stream.
+     *
+     * @param printStream The stream to be used for printing the summary.
+     */
+    private void printSummary(PrintStream printStream) {
+        printStream.println("Summary of another successful LitterBox AUMExtractor run:");
+        printStream.println();
+        printDuration(printStream);
+        printStream.println();
+        printPaths(printStream);
+        printStream.println();
+        printStats(printStream);
+    }
+
+    /**
+     * Prints the paths used for the analysis.
+     *
+     * @param printStream The stream to be used for printing the paths.
+     */
+    private void printPaths(PrintStream printStream) {
+        printStream.println("Analysis path: " + analysisFolder.getAbsolutePath());
+        if (dotOutputPath != null) {
+            printStream.println("Dot output path: " + dotOutputPath);
         } else {
-            createOutFolders(pathToOutputFolder, dotOutputPath);
-            Set<String> programs = getPrograms(analysisFolder);
-            AUMVisitor visitor = new AUMVisitor(pathToOutputFolder, dotOutputPath, programs);
-            Set<Exception> exceptions = new HashSet<>(); //TODO print exceptions to file immediately instead of collecting them
-            int successfullyAnalysed = 0;
-            int skippedDueToParsing = 0;
-            int skippedDueToAUMExtractor = 0;
-            int programsProcessed = 0;
-            for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
-                ObjectMapper mapper = new ObjectMapper();
-                Program program;
-                if ((FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json")) {
-                    programsProcessed++;
-                    int percentProcessed = (100 * programsProcessed / programs.size());
-                    System.out.println("Analysing " + programsProcessed + "/" + programs.size() + " ("
-                            + percentProcessed + "% done): " + fileEntry.getName());
-                    try {
-                        program = ProgramParser.parseProgram(fileEntry.getName(), mapper.readTree(fileEntry));
-                    } catch (Exception e) {
-                        skippedDueToParsing++;
-                        exceptions.add(e);
-                        logger.severe("Unable to parse project: " + fileEntry.getAbsolutePath());
-                        continue;
-                    }
-                    try {
-                        program.accept(visitor);
-                        successfullyAnalysed++;
-                    } catch (Exception e) {
-                        skippedDueToAUMExtractor++;
-                        exceptions.add(e);
-                        logger.severe("Creating AUM for the project failed.");
-                        visitor.rollbackAnalysis();
-                    }
-                }
-            }
-            printSummary(exceptions, successfullyAnalysed, skippedDueToParsing, skippedDueToAUMExtractor, visitor.getModelsExtracted());
-            visitor.shutdownAnalysis();
+            printStream.println("No dot output path specified.");
         }
+        printStream.println("Output path: " + outputFolder.getAbsolutePath());
     }
 
-    private Set<String> getPrograms(File analysisFolder) {
-        Set<String> programs = new HashSet<>();
-        for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
-            if ((FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json")) {
-                programs.add(fileEntry.getName());
-            }
-        }
-        return programs;
-    }
-
-    private void createOutFolders(String pathToOutputFolder, String dotOutputPath) {
-        File outputFolder = new File(pathToOutputFolder);
-        if (!outputFolder.exists()) {
-            logger.info("Creating output folder: " + pathToOutputFolder);
-            if (!outputFolder.mkdirs()) {
-                logger.severe("Failed to create output folder: " + pathToOutputFolder);
-            }
-        }
-        File dotOutputFolder = new File(dotOutputPath);
-        if (!dotOutputFolder.exists()) {
-            logger.info("Creating dot output folder: " + dotOutputPath);
-            if (!dotOutputFolder.mkdirs()) {
-                logger.severe("Failed to create dot output folder: " + dotOutputPath);
-            }
-        }
-    }
-
-    private void printSummary(Set<Exception> exceptions, int successfullyAnalysed, int skippedDueToParsing, int skippedDueToAUMExtractor, int modelsExtracted) {
-        System.out.println("\n\n\n");
-        String separator = "%".repeat(121);
-        System.out.println(separator);
-        System.out.println("EXCEPTIONS WHICH OCCURRED");
-        for (Exception exception : exceptions) {
-            exception.printStackTrace();
-        }
-        System.out.println(separator);
-        System.out.println("Skipped due to parsing: " + skippedDueToParsing + " projects.");
-        System.out.println("Skipped during creation of AUMs: " + skippedDueToAUMExtractor + " projects.");
-        System.out.println("Total number of exceptions which occurred: " + exceptions.size());
-        System.out.println("Projects for which analysis started: " + projectsPresent);
+    /**
+     * Prints statistics about the analysis of all programs in the analysis folder.
+     *
+     * @param printStream The stream to be used for printing the stats.
+     */
+    private void printStats(PrintStream printStream) {
+        printStream.println("Skipped due to parsing: " + skippedDueToParsing + " projects.");
+        printStream.println("Skipped during creation of AUMs: " + skippedDueToAUMExtractor + " projects.");
+        printStream.println("Total number of exceptions which occurred: " + exceptionsOccurred);
+        printStream.println("Projects for which analysis started: " + projectsPresent);
         int totalProjects = skippedDueToAUMExtractor + skippedDueToParsing + successfullyAnalysed;
-        System.out.println("Projects analysed/present: " + successfullyAnalysed + "/" + totalProjects);
-        System.out.println("Scripts analysed/present: " + scriptsAnalysed + "/" + scriptsPresent);
-        System.out.println("Procedure definitions analysed/present: " + procDefsAnalysed + "/" + procDefsPresent);
-        System.out.println("Models created: " + modelsExtracted);
-        System.out.println(separator);
-        // TODO print to file
-        // TODO add time needed & paths
+        printStream.println("Projects analysed/present: " + successfullyAnalysed + "/" + totalProjects);
+        printStream.println("Scripts analysed/present: " + scriptsAnalysed + "/" + scriptsPresent);
+        printStream.println("Procedure definitions analysed/present: " + procDefsAnalysed + "/" + procDefsPresent);
+        printStream.println("Models created: " + visitor.getModelsExtracted());
+    }
+
+    /**
+     * Prints start- and end time of the analysis and the duration of the analysis.
+     *
+     * @param printStream The stream to be used for printing the duration.
+     */
+    private void printDuration(PrintStream printStream) {
+        LocalDateTime now = LocalDateTime.now();
+        printStream.println("Start of analysis: " + start.format(DateTimeFormatter.ISO_DATE)
+                + " " + start.format(DateTimeFormatter.ISO_TIME));
+        printStream.println("End of analysis: " + now.format(DateTimeFormatter.ISO_DATE)
+                + " " + now.format(DateTimeFormatter.ISO_TIME));
+        Duration duration = Duration.between(start, now);
+        printStream.println("Duration: " + duration.toHours() + ":" + duration.toMinutes()
+                + ":" + duration.toSeconds() + "." + duration.toNanos());
+    }
+
+    /**
+     * Convenience method to create dot output for the specified programs
+     * without using the command line.
+     */
+    public static void main(String[] args) throws FileNotFoundException {
+        AUMExtractor extractor = new AUMExtractor("/home/nina/Studium/bachelor-thesis/projects/test/ControlTerminationTest", "/home/nina/Studium/bachelor-thesis/test-out/dotOutput/refactored-with-control/", "/home/nina/Studium/bachelor-thesis/test-out/");
+        extractor.runAnalysis();
     }
 }
