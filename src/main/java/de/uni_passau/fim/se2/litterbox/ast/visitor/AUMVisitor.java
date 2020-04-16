@@ -231,8 +231,18 @@ public class AUMVisitor implements ScratchVisitor {
      * @throws IOException If file operations fail.
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
-    private void saveToDotfile(int i, Model model) throws IOException { // TODO save with unique identifier for model?
-        File dotfile = new File(dotOutputPath + DOTFILE_PREFIX + i + DOTFILE_EXTENSION);
+    private void saveToDotfile(int i, Model model) throws IOException {
+        ModelData modelData = id2modelData.get(model2id.get(model));
+        String className = modelData.getClassName();
+        // the replacements are there to make sure that file names work but we can reverse engineer the method names afterwards
+        className = className.replace(" ", "_");
+        className = className.replace(":", "_colon_");
+        className = className.replace("/", "_slash_");
+        String methodName = modelData.getMethodName();
+        methodName = methodName.replace(" ", "_");
+        methodName = methodName.replace(":", "_colon_");
+        methodName = methodName.replace("/", "_slash_");
+        File dotfile = new File(dotOutputPath + DOTFILE_PREFIX + i + "_" + className + "_" + methodName + DOTFILE_EXTENSION);
         dotfile.createNewFile();
         model.saveToDotFile(dotfile);
     }
