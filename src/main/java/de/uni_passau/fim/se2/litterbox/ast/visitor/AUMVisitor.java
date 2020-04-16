@@ -70,7 +70,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Prefix for the generated dotfiles.
      */
-    public static final String DOTFILE_PREFIX = "aum-with";
+    public static final String DOTFILE_PREFIX = "aum-without";
 
     /**
      * File extension for dotfiles.
@@ -93,10 +93,13 @@ public class AUMVisitor implements ScratchVisitor {
     private final Set<String> programs; // typesnames
 
     /**
-     * Mapping model id number => model data.
+     * Mapping from model ID number to model data.
      */
     private final Map<Integer, ModelData> id2modelData = new HashMap<>();
 
+    /**
+     * The AUMExtractor this visitor belongs to.
+     */
     private final AUMExtractor extractor;
 
     /**
@@ -105,7 +108,7 @@ public class AUMVisitor implements ScratchVisitor {
     private Set<Model> modelsToSerialise = new HashSet<>();
 
     /**
-     * Mapping model => model id of the models to serialise during next
+     * Mapping from model to model ID of the models to serialise during next
      * serialisation.
      */
     private Map<Model, Integer> model2id = new HashMap<>();
@@ -131,7 +134,7 @@ public class AUMVisitor implements ScratchVisitor {
     private Model currentModel = new Model();
 
     /**
-     * Mapping id => state of the current model.
+     * Mapping from state ID to state of the current model.
      */
     private Map<Integer, State> states = new HashMap<>();
 
@@ -249,6 +252,10 @@ public class AUMVisitor implements ScratchVisitor {
 
     /**
      * Called after analysis of a procedure definition is done.
+     *
+     * @param toAdd     The model to be added to the models to serialise.
+     * @param procDefId The ID of the procedure definition analysis of which
+     *                  resulted in the model to add.
      */
     public void endProcDefAnalysis(Model toAdd, String procDefId) {
         extractor.newProcDefAnalysed();
@@ -258,7 +265,9 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Called after analysis of a script is done.
      *
-     * @param toAdd The model to be added to the models to serialise.
+     * @param toAdd    The model to be added to the models to serialise.
+     * @param scriptId The ID of the script analysis of which resulted in the
+     *                 model to add.
      */
     public void endScriptAnalysis(Model toAdd, String scriptId) {
         extractor.newScriptAnalysed();
@@ -269,8 +278,9 @@ public class AUMVisitor implements ScratchVisitor {
      * Called after analysis of both scripts and procedure definitions is done.
      *
      * @param toAdd    The model to be added to the models to serialise.
-     * @param methodId The id of the script or procedure definition
+     * @param methodId The ID of the script or procedure definition
      *                 analysis of which resulted in the model to add.
+     * @param type     Either script or procedure definition.
      */
     private void endAnalysis(Model toAdd, String methodId, String type) {
         for (Integer id : states.keySet()) {
@@ -691,8 +701,16 @@ public class AUMVisitor implements ScratchVisitor {
      * The present state has to be set to the end of the false branch before
      * calling this method.
      *
-     * @param endOfTrueBranchStateId Id of the state at the end of the true
+     * @param endOfTrueBranchStateId ID of the state at the end of the true
      *                               branch.
+     * @param foreverTrue            {@code true} iff there is a repeat forever at the
+     *                               end of the true branch.
+     * @param foreverFalse           {@code true} iff there is a repeat forever at the
+     *                               end of the false branch.
+     * @param terminationTrue        {@code true} iff there is a termination statement
+     *                               at the end of the true branch.
+     * @param terminationFalse       {@code true} iff there is a termination statement
+     *                               at the end of the false branch.
      */
     private void joinBranches(int endOfTrueBranchStateId, boolean foreverTrue,
                               boolean foreverFalse, boolean terminationTrue,
@@ -798,7 +816,7 @@ public class AUMVisitor implements ScratchVisitor {
      * the current model.
      *
      * @param ifName Name of the if statement.
-     * @return The id of the state after the if statement.
+     * @return The ID of the state after the if statement.
      */
     private int addTrueBranch(String ifName) {
         assert !endAnalysis;

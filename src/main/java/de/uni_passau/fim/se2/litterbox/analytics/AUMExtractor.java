@@ -153,6 +153,7 @@ public class AUMExtractor {
      *                           actor usage models are created.
      * @param aumOutputPath      Path to the folder in which the actor usage
      *                           models are created.
+     * @throws FileNotFoundException If creation of the print streams fails.
      */
     public AUMExtractor(String analysisFolderPath, String dotOutputPath, String aumOutputPath) throws FileNotFoundException {
         this.dotOutputPath = dotOutputPath;
@@ -260,6 +261,8 @@ public class AUMExtractor {
 
     /**
      * Returns the names of all programs in the analysis folder.
+     *
+     * @return The names of all programs in the analysis folder.
      */
     public Set<String> getPrograms() {
         return programs;
@@ -459,6 +462,9 @@ public class AUMExtractor {
     /**
      * Convenience method to create dot output for the specified programs
      * without using the command line.
+     *
+     * @param args Command line arguments.
+     * @throws FileNotFoundException if creating the AUMExtractor fails.
      */
     public static void main(String[] args) throws FileNotFoundException {
         AUMExtractor extractor = new AUMExtractor("/home/nina/Studium/bachelor-thesis/projects/test/ControlTerminationTest", "/home/nina/Studium/bachelor-thesis/test-out/dotOutput/refactored-with-control/", "/home/nina/Studium/bachelor-thesis/test-out/");
