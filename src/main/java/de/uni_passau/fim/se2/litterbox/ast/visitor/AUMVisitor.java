@@ -68,6 +68,11 @@ public class AUMVisitor implements ScratchVisitor {
     private static final String PROC_DEF = "procedure";
 
     /**
+     * Location of the dot output files.
+     */
+    private final String dotOutputPath;
+
+    /**
      * Directory to store the models into.
      */
     private final String pathToOutputDir;
@@ -78,17 +83,18 @@ public class AUMVisitor implements ScratchVisitor {
     private final Set<String> programs; // typesnames
 
     /**
-     * Models to serialize during next serialization.
-     */
-    private Set<Model> modelsToSerialize;
-
-    /**
      * Mapping model id number => model data.
      */
     private final Map<Integer, ModelData> id2modelData;
 
     /**
-     * Mapping model => model id.
+     * Models to serialise during next serialisation.
+     */
+    private Set<Model> modelsToSerialise;
+
+    /**
+     * Mapping model => model id of the models to serialise during next
+     * serialisation.
      */
     private Map<Model, Integer> model2id;
 
@@ -140,11 +146,6 @@ public class AUMVisitor implements ScratchVisitor {
     private boolean endAnalysis = false;
 
     /**
-     * Location of the dot output files.
-     */
-    private final String dotOutputPath;
-
-    /**
      * Creates a new instance of this visitor.
      *
      * @param pathToOutputDir Directory to hold the models.
@@ -156,7 +157,7 @@ public class AUMVisitor implements ScratchVisitor {
         this.programs = programs;
         id2modelData = new HashMap<>();
         model2id = new HashMap<>();
-        modelsToSerialize = new HashSet<>();
+        modelsToSerialise = new HashSet<>();
         modelsCreated = 0;
         currentModel = new Model();
         currentActorName = "";
@@ -171,16 +172,16 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     /**
-     * Serializes models created since the last serialization (or since the
-     * beginning of the analysis, if this is the first serialization) until
+     * Serialises models created since the last serialisation (or since the
+     * beginning of the analysis, if this is the first serialisation) until
      * this point to a file.  This must be called after finishing analysis of
-     * every class, because models are serialized in files according to classes,
+     * every class, because models are serialised in files according to classes,
      * from which they were created.
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
     public void serialiseModels() {
-        // serialize models if necessary
-        if (modelsToSerialize.size() > 0) {
+        // serialise models if necessary
+        if (modelsToSerialise.size() > 0) {
             try {
                 String fileName = pathToOutputDir + "/" + programName + ".models.ser";
                 File file = new File(fileName);
@@ -189,9 +190,9 @@ public class AUMVisitor implements ScratchVisitor {
                         new FileOutputStream(new File(fileName), true));
                 ObjectOutputStream objectOutput =
                         new ObjectOutputStream(fileOutput);
-                objectOutput.writeInt(modelsToSerialize.size());
+                objectOutput.writeInt(modelsToSerialise.size());
                 int i = 0;
-                for (Model model : modelsToSerialize) {
+                for (Model model : modelsToSerialise) {
                     i++;
                     if (dotOutputPath != null) {
                         saveToDotfile(i, model);
@@ -207,8 +208,8 @@ public class AUMVisitor implements ScratchVisitor {
             }
         }
 
-        // empty the set of models to be serialized
-        modelsToSerialize = new HashSet<>();
+        // empty the set of models to be serialised
+        modelsToSerialise = new HashSet<>();
         model2id = new HashMap<>();
     }
 
@@ -256,7 +257,7 @@ public class AUMVisitor implements ScratchVisitor {
             assert (id == states.get(id).getId());
         }
         modelsCreated++;
-        modelsToSerialize.add(toAdd);
+        modelsToSerialise.add(toAdd);
         model2id.put(toAdd, modelsCreated);
         id2modelData.put(modelsCreated, new ModelData("program: " +
                 programName + " actor: " + currentActorName,
@@ -346,9 +347,9 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     /**
-     * Serializes id2modelData field of the analyzer into given stream.
+     * Serialises id2modelData field of the analyser into given stream.
      *
-     * @param out Stream to serialize the field to.
+     * @param out Stream to serialise the field to.
      * @throws IOException if I/O errors occur while writing to the underlying
      *                     stream.
      */
@@ -362,9 +363,9 @@ public class AUMVisitor implements ScratchVisitor {
     }
 
     /**
-     * Serializes list of types analyzed by this Analyzer into given stream.
+     * Serialises list of types analysed by this Analyser into given stream.
      *
-     * @param out Stream to serialize the types' names to.
+     * @param out Stream to serialise the types' names to.
      * @throws IOException Thrown by writeObject in case there are problems
      *                     with the underlying stream.
      */
@@ -381,7 +382,7 @@ public class AUMVisitor implements ScratchVisitor {
     public void rollbackAnalysis() {
         currentActorName = "";
         if (currentModel != null) {
-            modelsToSerialize.remove(currentModel);
+            modelsToSerialise.remove(currentModel);
             model2id.remove(currentModel);
         }
         clear();
