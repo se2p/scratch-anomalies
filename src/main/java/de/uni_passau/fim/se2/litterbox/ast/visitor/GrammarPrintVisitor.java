@@ -74,8 +74,6 @@ public class GrammarPrintVisitor extends PrintVisitor {
     private boolean emitAttributeType = false;
     private boolean volume = false;
 
-    private int scriptNr = 0;
-
     public GrammarPrintVisitor(PrintStream printStream) {
         super(printStream);
     }
@@ -97,7 +95,6 @@ public class GrammarPrintVisitor extends PrintVisitor {
                 newLine();
             }
         }
-        scriptNr = 0;
     }
 
     @Override
@@ -159,9 +156,8 @@ public class GrammarPrintVisitor extends PrintVisitor {
 
     @Override
     public void visit(Script script) {
-        scriptNr++;
         emitNoSpace("script");
-        emitToken(String.valueOf(scriptNr));
+        emitToken(script.getId());
         emitToken("on");
         script.getEvent().accept(this);
         emitNoSpace(" do");
