@@ -240,10 +240,12 @@ public class AUMVisitor implements ScratchVisitor {
         // the replacements are there to make sure that file names work but we can reverse engineer the method names afterwards
         className = className.replace(" ", "_");
         className = className.replace(":", "_colon_");
+        className = className.replace(";", "_semicolon_");
         className = className.replace(File.separator, "_slash_");
         String methodName = modelData.getMethodName();
         methodName = methodName.replace(" ", "_");
         methodName = methodName.replace(":", "_colon_");
+        methodName = methodName.replace(";", "_semicolon_");
         methodName = methodName.replace(File.separator, "_slash_");
         File dotfile = new File(dotOutputPath + DOTFILE_PREFIX + i + "_" + className + "_" + methodName + DOTFILE_EXTENSION);
         dotfile.createNewFile();

@@ -467,7 +467,7 @@ public class AUMExtractor {
      * @throws FileNotFoundException if creating the AUMExtractor fails.
      */
     public static void main(String[] args) throws FileNotFoundException {
-        AUMExtractor extractor = new AUMExtractor("/home/nina/Studium/bachelor-thesis/projects/test/ControlTerminationTest", "/home/nina/Studium/bachelor-thesis/test-out/dotOutput/refactored-with-control/", "/home/nina/Studium/bachelor-thesis/test-out/");
+        AUMExtractor extractor = new AUMExtractor("/home/nina/Schreibtisch/malicious/", "/home/nina/Schreibtisch/dotout/", "/home/nina/Schreibtisch/out/");
         extractor.runAnalysis();
     }
 }
