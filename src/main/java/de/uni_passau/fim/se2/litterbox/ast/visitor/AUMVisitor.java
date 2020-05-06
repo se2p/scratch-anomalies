@@ -29,6 +29,7 @@ import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.*;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.StopAll;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.termination.StopThisScript;
+import org.softevo.jutil.graphs.Graph;
 import org.softevo.oumextractor.modelcreator1.ModelData;
 import org.softevo.oumextractor.modelcreator1.model.*;
 
@@ -76,6 +77,13 @@ public class AUMVisitor implements ScratchVisitor {
      * File extension for dotfiles.
      */
     public static final String DOTFILE_EXTENSION = ".dot";
+
+    /**
+     * Name of repeat forever loop transitions.
+     */
+    public static final String FOREVER_NAME = new RepeatForeverStmt(
+            new StmtList(new LinkedList<>())
+    ).getUniqueName();
 
     /**
      * Location of the dot output files.
@@ -510,11 +518,43 @@ public class AUMVisitor implements ScratchVisitor {
             }
         }
         if (!lastIsForever) {
+            addExitTransition();
+        }
+        addAdditionalExitTransitions();
+    }
+
+    /**
+     * Adds a transition to the exit state of the model in the last stmt added
+     * was not a repeat forever loop.
+     */
+    private void addExitTransition() {
+        boolean lastAddedTransitionIsForever = false;
+        Graph<State, Transition> graph = currentModel.getUnderlyingGraph();
+        State predecessor = states.get(transitionEnd.getId() - 1);
+        Set<Transition> edgesFromLastState = graph.getEdges(predecessor, transitionEnd);
+        for (Transition t : edgesFromLastState) {
+            if (t instanceof InvokeMethodTransition) {
+                InvokeMethodTransition invokeTransition = (InvokeMethodTransition) t;
+                String methodName = invokeTransition.getMethodCall().getMethodName();
+                if (methodName.contains(FOREVER_NAME)) {
+                    lastAddedTransitionIsForever = true;
+                    break;
+                }
+            }
+        }
+        if (!lastAddedTransitionIsForever) {
             EpsilonTransition returnTransition = EpsilonTransition.get();
             setTransitionStartTo(transitionEnd);
             transitionEnd = currentModel.getExitState();
             currentModel.addTransition(transitionStart, transitionEnd, returnTransition);
         }
+    }
+
+    /**
+     * Adds exit transitions for all exits that happen because of termination
+     * stmts that are not at the end of a script.
+     */
+    private void addAdditionalExitTransitions() {
         for (Integer integer : statesToExit) {
             transitionEnd = currentModel.getExitState();
             State state = states.get(integer);
@@ -687,8 +727,14 @@ public class AUMVisitor implements ScratchVisitor {
                     || foreverTrue && terminationFalse) {
                 // the if statement is blocking and the creation of this AUM
                 // should end
-                statesToExit.add(endOfTrueBranchStateId);
-                statesToExit.add(transitionEnd.getId());
+                // add end of true branch only if it is not a forever
+                if (!foreverTrue) {
+                    statesToExit.add(endOfTrueBranchStateId);
+                }
+                // add end of false branch only if it is not a forever
+                if(!foreverFalse) {
+                    statesToExit.add(transitionEnd.getId());
+                }
                 endAnalysis = true;
             } else {
                 joinBranches(endOfTrueBranchStateId, foreverTrue, foreverFalse,
