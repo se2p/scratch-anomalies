@@ -18,16 +18,17 @@
  */
 package de.uni_passau.fim.se2.litterbox.analytics;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import de.uni_passau.fim.se2.litterbox.ast.ParsingException;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.parser.ProgramParser;
 import de.uni_passau.fim.se2.litterbox.ast.visitor.AUMVisitor;
+import de.uni_passau.fim.se2.litterbox.utils.JsonParser;
+import de.uni_passau.fim.se2.litterbox.utils.ZipReader;
 import org.apache.commons.io.FilenameUtils;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
@@ -223,7 +224,7 @@ public class AUMExtractor {
     private void setPrograms() {
         programs = new HashSet<>();
         for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
-            if (isJson(fileEntry)) {
+            if (isJson(fileEntry) || isSb3(fileEntry)) {
                 programs.add(fileEntry.getName());
             }
         }
@@ -237,6 +238,16 @@ public class AUMExtractor {
      */
     private boolean isJson(File fileEntry) {
         return (FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("json");
+    }
+
+    /**
+     * Checks whether this file is a sb3 file.
+     *
+     * @param fileEntry The file to be checked.
+     * @return {@code true} iff the file is a sb3 file.
+     */
+    private boolean isSb3(File fileEntry) {
+        return (FilenameUtils.getExtension(fileEntry.getPath())).toLowerCase().equals("sb3");
     }
 
     /**
@@ -314,7 +325,7 @@ public class AUMExtractor {
     /**
      * Creates actor usage models for the scratch programs in the analysis folder.
      */
-    public void runAnalysis() {
+    public void runAnalysis() throws IOException, ParsingException {
         for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
             if (isJson(fileEntry)) {
                 programsProcessed++;
@@ -324,6 +335,22 @@ public class AUMExtractor {
                 Program program = parseProgramFromFile(fileEntry);
                 if (program != null) {
                     createActorUsageModels(program, fileEntry);
+                }
+            } else {
+                if (isSb3(fileEntry)) {
+                    programsProcessed++;
+                    int percentProcessed = (100 * programsProcessed / programs.size());
+                    System.out.println("Analysing " + programsProcessed + "/" + programs.size() + " ("
+                            + percentProcessed + "% done): " + fileEntry.getName());
+                    String jsonString = ZipReader.getJsonString(fileEntry.getPath());
+                    JsonNode node = JsonParser.getTargetsNodeFromJSONString(jsonString);
+                    if (node == null) {
+                        continue;
+                    }
+                    Program program = ProgramParser.parseProgram(fileEntry.getName(), node);
+                    if (program != null) {
+                        createActorUsageModels(program, fileEntry);
+                    }
                 }
             }
         }
@@ -466,8 +493,8 @@ public class AUMExtractor {
      * @param args Command line arguments.
      * @throws FileNotFoundException if creating the AUMExtractor fails.
      */
-    public static void main(String[] args) throws FileNotFoundException {
-        AUMExtractor extractor = new AUMExtractor("/home/nina/Schreibtisch/malicious/", "/home/nina/Schreibtisch/dotout/", "/home/nina/Schreibtisch/out/");
+    public static void main(String[] args) throws IOException, ParsingException {
+        AUMExtractor extractor = new AUMExtractor("/home/nina//Studium/papers/anomaly-detection-in-scratch/projects/sb3/", "/home/nina/Studium/papers/anomaly-detection-in-scratch/dotout/", "/home/nina/Studium/papers/anomaly-detection-in-scratch/ser/");
         extractor.runAnalysis();
     }
 }
