@@ -429,7 +429,7 @@ public class AUMExtractor {
      * @param printStream The stream to be used for printing the summary.
      */
     private void printSummary(PrintStream printStream) {
-        printStream.println("Summary of another successful LitterBox AUMExtractor run:");
+        printStream.println("Summary of another successful LitterBox AUMExtractor with control blocks run:");
         printStream.println();
         printDuration(printStream);
         printStream.println();
