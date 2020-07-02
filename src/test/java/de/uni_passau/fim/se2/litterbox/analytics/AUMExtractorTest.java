@@ -54,6 +54,24 @@ public class AUMExtractorTest {
         assertTrue(modelString.contains("AS 6 --StopAll--> \"EXIT\""));
     }
 
+    @Test
+    public void testForeverInProcedure(@TempDir File tempDir) throws Exception {
+        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/foreverInProcedure", null, tempDir.toString());
+        extractor.runAnalysis();
+
+        Map<Integer, ModelData> id2ModelData = getId2ModelData(tempDir);
+        List<Model> models = getModels(tempDir, id2ModelData);
+        assertEquals(1, models.size());
+        Model model = models.get(0);
+        assertEquals(4, model.getAllTransitions().size());
+        assertEquals(4, model.getUnderlyingGraph().getVertices().size());
+        String modelString = model.toString();
+        assertTrue(modelString.contains("\"ENTRY\" --ProcedureDefinition--> AS 2"));
+        assertTrue(modelString.contains("AS 2 --SayForSecs--> AS 3"));
+        assertTrue(modelString.contains("AS 3 --RepeatForeverStmt--> AS 4"));
+        assertTrue(modelString.contains("AS 4 --Say--> AS 4"));
+    }
+
     private Map<Integer, ModelData> getId2ModelData(File modelsDir) throws IOException, ClassNotFoundException {
         Map<Integer, ModelData> id2data = new HashMap<>();
         String fileName = "modelsdata.ser";
