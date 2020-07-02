@@ -72,6 +72,32 @@ public class AUMExtractorTest {
         assertTrue(modelString.contains("AS 4 --Say--> AS 4"));
     }
 
+    @Test
+    public void testControlStmts(@TempDir File tempDir) throws Exception {
+        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/controlStmts/", null, tempDir.toString());
+        extractor.runAnalysis();
+
+        Map<Integer, ModelData> id2ModelData = getId2ModelData(tempDir);
+        List<Model> models = getModels(tempDir, id2ModelData);
+        assertEquals(1, models.size());
+        Model model = models.get(0);
+        assertEquals(12, model.getAllTransitions().size());
+        assertEquals(9, model.getUnderlyingGraph().getVertices().size());
+        String modelString = model.toString();
+        assertTrue(modelString.contains("\"ENTRY\" --GreenFlag--> AS 2"));
+        assertTrue(modelString.contains("AS 2 --MoveSteps--> AS 3"));
+        assertTrue(modelString.contains("AS 3 --RepeatTimesStmt--> AS 4"));
+        assertTrue(modelString.contains("AS 4 --IfThenStmt--> AS 5"));
+        assertTrue(modelString.contains("AS 4 --IfElseStmt--> AS 9"));
+        assertTrue(modelString.contains("AS 5 ----> AS 4"));
+        assertTrue(modelString.contains("AS 5 --TurnRight--> AS 4"));
+        assertTrue(modelString.contains("AS 14 --StopAllSounds--> AS 14"));
+        assertTrue(modelString.contains("AS 11 --AskAndWait--> \"EXIT\""));
+        assertTrue(modelString.contains("AS 11 --ClearSoundEffects--> AS 11"));
+        assertTrue(modelString.contains("AS 9 --RepeatForeverStmt--> AS 14"));
+        assertTrue(modelString.contains("AS 9 --UntilStmt--> AS 11"));
+    }
+
     private Map<Integer, ModelData> getId2ModelData(File modelsDir) throws IOException, ClassNotFoundException {
         Map<Integer, ModelData> id2data = new HashMap<>();
         String fileName = "modelsdata.ser";
