@@ -49,8 +49,8 @@ public class AUMExtractorTest {
         assertTrue(model.toString().contains("AS 2 --IfThenStmt--> AS 3"));
         assertTrue(model.toString().contains("AS 3 --MoveSteps--> \"EXIT\""));
         assertTrue(model.toString().contains("AS 3 --RepeatForeverStmt--> AS 5"));
-        assertTrue(model.toString().contains("AS 3 --RepeatForeverStmt--> AS 5"));
         assertTrue(model.toString().contains("AS 5 --TurnRight--> AS 6"));
+        assertTrue(model.toString().contains("AS 6 --StopAll--> \"EXIT\""));
     }
 
     private Map<Integer, ModelData> getId2ModelData(File tempDir) throws IOException, ClassNotFoundException {
