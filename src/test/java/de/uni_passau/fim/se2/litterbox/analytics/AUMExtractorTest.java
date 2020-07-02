@@ -45,21 +45,20 @@ public class AUMExtractorTest {
         Model model = models.get(0);
         assertEquals(6, model.getAllTransitions().size());
         assertEquals(6, model.getUnderlyingGraph().getVertices().size());
-        assertTrue(model.toString().contains("\"ENTRY\" --KeyPressed--> AS 2"));
-        assertTrue(model.toString().contains("AS 2 --IfThenStmt--> AS 3"));
-        assertTrue(model.toString().contains("AS 3 --MoveSteps--> \"EXIT\""));
-        assertTrue(model.toString().contains("AS 3 --RepeatForeverStmt--> AS 5"));
-        assertTrue(model.toString().contains("AS 5 --TurnRight--> AS 6"));
-        assertTrue(model.toString().contains("AS 6 --StopAll--> \"EXIT\""));
+        String modelString = model.toString();
+        assertTrue(modelString.contains("\"ENTRY\" --KeyPressed--> AS 2"));
+        assertTrue(modelString.contains("AS 2 --IfThenStmt--> AS 3"));
+        assertTrue(modelString.contains("AS 3 --MoveSteps--> \"EXIT\""));
+        assertTrue(modelString.contains("AS 3 --RepeatForeverStmt--> AS 5"));
+        assertTrue(modelString.contains("AS 5 --TurnRight--> AS 6"));
+        assertTrue(modelString.contains("AS 6 --StopAll--> \"EXIT\""));
     }
 
-    private Map<Integer, ModelData> getId2ModelData(File tempDir) throws IOException, ClassNotFoundException {
-        Map<Integer, ModelData> id2data = new HashMap<Integer, ModelData>();
+    private Map<Integer, ModelData> getId2ModelData(File modelsDir) throws IOException, ClassNotFoundException {
+        Map<Integer, ModelData> id2data = new HashMap<>();
         String fileName = "modelsdata.ser";
-        BufferedInputStream fileInput = new BufferedInputStream(
-                new FileInputStream(new File(tempDir, fileName)));
-        ObjectInputStream objectInput =
-                new ObjectInputStream(fileInput);
+        BufferedInputStream fileInput = new BufferedInputStream(new FileInputStream(new File(modelsDir, fileName)));
+        ObjectInputStream objectInput = new ObjectInputStream(fileInput);
         int num = objectInput.readInt();
         for (int i = 0; i < num; i++) {
             int id = objectInput.readInt();
@@ -70,15 +69,12 @@ public class AUMExtractorTest {
         return id2data;
     }
 
-    private List<Model> getModels(File tempDir, Map<Integer, ModelData> id2data) throws IOException, ClassNotFoundException {
+    private List<Model> getModels(File modelsDir, Map<Integer, ModelData> id2data) throws IOException, ClassNotFoundException {
         List<Model> models = new LinkedList<>();
-        for (File file : tempDir.listFiles()) {
+        for (File file : modelsDir.listFiles()) {
             if (file.getName().endsWith(".models.ser")) {
-
-                BufferedInputStream fileInput = new BufferedInputStream(
-                        new FileInputStream(file));
-                ObjectInputStream objectInput =
-                        new ObjectInputStream(fileInput);
+                BufferedInputStream fileInput = new BufferedInputStream(new FileInputStream(file));
+                ObjectInputStream objectInput = new ObjectInputStream(fileInput);
                 int number = objectInput.readInt();
                 for (int i = 0; i < number; i++) {
                     int id = objectInput.readInt(); // do not delete this, even if you don't need the model data. Otherwise this process will fail.
