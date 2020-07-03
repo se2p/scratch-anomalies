@@ -175,7 +175,7 @@ public class AUMExtractor {
 
     /**
      * Creates all non-existing required output folders and deletes any files
-     * which is present in the output folders.
+     * which are present in the output folders.
      */
     @SuppressWarnings("ResultOfMethodCallIgnored")
     private void prepareOutFolders() {
