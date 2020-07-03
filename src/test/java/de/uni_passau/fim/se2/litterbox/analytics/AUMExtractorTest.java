@@ -98,6 +98,22 @@ public class AUMExtractorTest {
         assertTrue(modelString.contains("AS 9 --UntilStmt--> AS 11"));
     }
 
+    @Test
+    public void testDotfileGenerationNoSeparator(@TempDir File tempDir) throws Exception {
+        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/foreverInProcedure", tempDir.toString(), tempDir.toString());
+        extractor.runAnalysis();
+        File dotfile = new File(tempDir, "aum-with1_program_colon__foreverInProcedure.json_actor_colon__Sprite1_procedure_colon__C@E9|Js{46hHKa,_D!_semicolon_f.dot");
+        assertTrue(dotfile.exists());
+    }
+
+    @Test
+    public void testDotfileGenerationSeparatorPresent(@TempDir File tempDir) throws Exception {
+        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/foreverInProcedure", tempDir.toString() + File.separator, tempDir.toString() + File.separator);
+        extractor.runAnalysis();
+        File dotfile = new File(tempDir, "aum-with1_program_colon__foreverInProcedure.json_actor_colon__Sprite1_procedure_colon__C@E9|Js{46hHKa,_D!_semicolon_f.dot");
+        assertTrue(dotfile.exists());
+    }
+
     private Map<Integer, ModelData> getId2ModelData(File modelsDir) throws IOException, ClassNotFoundException {
         Map<Integer, ModelData> id2data = new HashMap<>();
         String fileName = "modelsdata.ser";

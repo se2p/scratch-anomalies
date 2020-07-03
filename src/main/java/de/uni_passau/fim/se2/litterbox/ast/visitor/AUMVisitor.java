@@ -203,11 +203,10 @@ public class AUMVisitor implements ScratchVisitor {
         // serialise models if necessary
         if (modelsToSerialise.size() > 0) {
             try {
-                String fileName = outputFolderPath + File.separator + programName + ".models.ser";
-                File file = new File(fileName);
+                File file = new File(outputFolderPath, programName + ".models.ser");
                 file.createNewFile();
                 BufferedOutputStream fileOutput = new BufferedOutputStream(
-                        new FileOutputStream(new File(fileName), true));
+                        new FileOutputStream(new File(file.getPath()), true));
                 ObjectOutputStream objectOutput =
                         new ObjectOutputStream(fileOutput);
                 objectOutput.writeInt(modelsToSerialise.size());
@@ -255,7 +254,7 @@ public class AUMVisitor implements ScratchVisitor {
         methodName = methodName.replace(":", "_colon_");
         methodName = methodName.replace(";", "_semicolon_");
         methodName = methodName.replace(File.separator, "_slash_");
-        File dotfile = new File(dotOutputPath + DOTFILE_PREFIX + i + "_" + className + "_" + methodName + DOTFILE_EXTENSION);
+        File dotfile = new File(dotOutputPath, DOTFILE_PREFIX + i + "_" + className + "_" + methodName + DOTFILE_EXTENSION);
         dotfile.createNewFile();
         model.saveToDotFile(dotfile);
     }
