@@ -126,7 +126,7 @@
             <groupId>org.softevo.oumextractor</groupId>
             <artifactId>oumextractor</artifactId>
             <version>1.0</version>
-            <scope>compile</scope>
+            <scope>system</scope>
             <systemPath>${basedir}/lib/oumextractor.jar</systemPath>
         </dependency>
         <dependency>
