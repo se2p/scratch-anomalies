@@ -20,13 +20,10 @@ package de.uni_passau.fim.se2.litterbox;
 
 import de.uni_passau.fim.se2.litterbox.analytics.*;
 import de.uni_passau.fim.se2.litterbox.ast.ParsingException;
-import de.uni_passau.fim.se2.litterbox.ast.model.expression.num.Add;
 import de.uni_passau.fim.se2.litterbox.utils.IssueTranslator;
 import org.apache.commons.cli.*;
 
-import java.io.File;
 import java.io.IOException;
-import java.util.logging.Logger;
 
 import static de.uni_passau.fim.se2.litterbox.utils.GroupConstants.*;
 
@@ -54,6 +51,8 @@ public class Main {
     private static final String OUTPUT_LANG_SHORT = "k";
     private static final String PROJECTOUT = "projectout";
     private static final String PROJECTOUT_SHORT = "r";
+    private static final String DOTOUT = "dotout";
+    private static final String DOTOUT_SHORT = "d";
     private static final String OUTPUT = "output";
     private static final String OUTPUT_SHORT = "o";
     private static final String ANNOTATE = "annotate";
@@ -101,6 +100,8 @@ public class Main {
                         + "(file will be created if not existing yet, path has to exist)");
         options.addOption(ANNOTATE_SHORT, ANNOTATE, true, "path where scratch files with hints to bug patterns should"
                 + " be created");
+        options.addOption(DOTOUT_SHORT, DOTOUT, true, "path where dot files of AUMs should be created");
+
         // Parameters
         options.addOption(DETECTORS_SHORT, DETECTORS, true, "name all detectors you want to run separated by ',' "
                 + " (all detectors defined in the README)");
@@ -173,11 +174,17 @@ public class Main {
         runAnalysis(cmd, analyzer);
     }
 
-    static void generateAUMs(CommandLine cmd) {
+    static void generateAUMs(CommandLine cmd) throws IOException, ParsingException {
         String pathToAnalyseFolder = cmd.getOptionValue(PROJECTPATH);
         String pathToOutputFolder = cmd.getOptionValue(OUTPUT);
-        AUMExtractor extractor = new AUMExtractor();
-        extractor.createActorUsageModels(pathToAnalyseFolder, null, pathToOutputFolder); // TODO make AUMExtractor extend Analyzer, add dotoutputpath
+        String pathToDotOut = null;
+        if (cmd.hasOption(DOTOUT)) {
+            pathToDotOut = cmd.getOptionValue(DOTOUT);
+        }
+
+        AUMExtractor extractor = new AUMExtractor(pathToAnalyseFolder, pathToDotOut, pathToOutputFolder);
+        extractor.runAnalysis();
+        // TODO make AUMExtractor extend Analyzer?
     }
 
     static void statsPrograms(CommandLine cmd) throws ParseException, IOException, ParsingException {
