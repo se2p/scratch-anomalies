@@ -40,6 +40,8 @@ import static java.util.Objects.requireNonNull;
 
 /**
  * Used for generating actor usage models of scratch programs.
+ *
+ * @author Nina Körber
  */
 public class AUMExtractor {
     /**

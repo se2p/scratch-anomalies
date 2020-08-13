@@ -40,6 +40,8 @@ import java.util.logging.Logger;
 
 /**
  * Visitor used for creating actor usage models of scratch programs.
+ *
+ * @author Nina Körber
  */
 public class AUMVisitor implements ScratchVisitor {
 
