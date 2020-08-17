@@ -24,6 +24,10 @@ import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
 import de.uni_passau.fim.se2.litterbox.ast.model.StmtList;
 import de.uni_passau.fim.se2.litterbox.ast.model.event.Event;
+import de.uni_passau.fim.se2.litterbox.ast.model.metadata.astLists.FieldsMetadataList;
+import de.uni_passau.fim.se2.litterbox.ast.model.metadata.astLists.InputMetadataList;
+import de.uni_passau.fim.se2.litterbox.ast.model.metadata.block.NoMutationMetadata;
+import de.uni_passau.fim.se2.litterbox.ast.model.metadata.block.NonDataBlockMetadata;
 import de.uni_passau.fim.se2.litterbox.ast.model.procedure.ProcedureDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.control.*;
@@ -84,8 +88,9 @@ public class AUMVisitor implements ScratchVisitor {
      * Name of repeat forever loop transitions.
      */
     public static final String FOREVER_NAME = new RepeatForeverStmt(
-            new StmtList(new LinkedList<>())
-    ).getUniqueName();
+            new StmtList(new LinkedList<>()), new NonDataBlockMetadata("", "", "", "", "",
+            new InputMetadataList(new LinkedList<>()), new FieldsMetadataList(new LinkedList<>()), false, false,
+            new NoMutationMetadata())).getUniqueName();
 
     /**
      * Location of the dot output files.
@@ -452,7 +457,7 @@ public class AUMVisitor implements ScratchVisitor {
         assert !endAnalysis;
         extractor.newProjectPresent();
         programName = program.getIdent().getName();
-        for (ActorDefinition def : program.getActorDefinitionList().getDefintions()) {
+        for (ActorDefinition def : program.getActorDefinitionList().getDefinitions()) {
             currentActorName = def.getIdent().getName();
             for (ProcedureDefinition procDef : def.getProcedureDefinitionList().getList()) {
                 procDef.accept(this);
