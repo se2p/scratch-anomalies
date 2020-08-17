@@ -156,8 +156,7 @@ public class GrammarPrintVisitor extends PrintVisitor {
 
     @Override
     public void visit(Script script) {
-        emitNoSpace("script");
-        emitToken(script.getId());
+        emitToken("script");
         emitToken("on");
         script.getEvent().accept(this);
         emitNoSpace(" do");

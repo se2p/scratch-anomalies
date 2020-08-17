@@ -73,7 +73,7 @@ public class ScriptParser {
             }
         }
 
-        return new Script(event, stmtList, blockID);
+        return new Script(event, stmtList);
     }
 
     private static boolean isEvent(JsonNode current) {

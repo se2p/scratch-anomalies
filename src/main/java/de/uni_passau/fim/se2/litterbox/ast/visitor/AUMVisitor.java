@@ -282,32 +282,31 @@ public class AUMVisitor implements ScratchVisitor {
      * Called after analysis of a script is done.
      *
      * @param toAdd    The model to be added to the models to serialise.
-     * @param scriptId The ID of the script analysis of which resulted in the
-     *                 model to add.
+     * @param eventName The name of the hat block of the script analysis of which resulted in the model to add.
      */
-    public void endScriptAnalysis(Model toAdd, String scriptId) {
+    public void endScriptAnalysis(Model toAdd, String eventName) {
         extractor.newScriptAnalysed();
-        endAnalysis(toAdd, scriptId, SCRIPT);
+        endAnalysis(toAdd, eventName, SCRIPT);
     }
 
     /**
      * Called after analysis of both scripts and procedure definitions is done.
      *
-     * @param toAdd    The model to be added to the models to serialise.
-     * @param methodId The ID of the script or procedure definition
-     *                 analysis of which resulted in the model to add.
-     * @param type     Either script or procedure definition.
+     * @param toAdd     The model to be added to the models to serialise.
+     * @param eventName The name of the procedure or the hat block of the script
+     *                  analysis of which resulted in the model to add.
+     * @param type      Either script or procedure definition.
      */
-    private void endAnalysis(Model toAdd, String methodId, String type) {
+    private void endAnalysis(Model toAdd, String eventName, String type) {
         for (Integer id : states.keySet()) {
             assert (id == states.get(id).getId());
         }
         modelsCreated++;
         modelsToSerialise.add(toAdd);
         model2id.put(toAdd, modelsCreated);
-        id2modelData.put(modelsCreated, new ModelData("program: " +
-                programName + " actor: " + currentActorName,
-                type + ": " + methodId, ACTOR));
+        String methodName = type + ": " + eventName;
+        String className = "program: " + programName + " actor: " + currentActorName;
+        id2modelData.put(modelsCreated, new ModelData(className, methodName, ACTOR));
         clear();
     }
 
@@ -504,7 +503,7 @@ public class AUMVisitor implements ScratchVisitor {
         // add the statements
         List<Stmt> listOfStmt = script.getStmtList().getStmts();
         addStmtList(listOfStmt);
-        endScriptAnalysis(new Model(currentModel), script.getId());
+        endScriptAnalysis(new Model(currentModel), script.getEvent().getUniqueName());
     }
 
     /**
