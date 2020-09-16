@@ -75,12 +75,12 @@ public class MissingInitialization implements IssueFinder {
                 // TODO: The comment is attached to the statement, not the actual usage...
                 ASTNode containingScript = use.getUseTarget().getScriptOrProcedure();
                 if (containingScript instanceof Script) {
-                    issues.add(new Issue(this, use.getUseTarget().getActor(),
+                    issues.add(new Issue(this, program, use.getUseTarget().getActor(),
                             (Script) containingScript,
                             use.getUseTarget().getASTNode(),
                             null)); // TODO: Where is the relevant metadata?
                 } else {
-                    issues.add(new Issue(this, use.getUseTarget().getActor(),
+                    issues.add(new Issue(this, program, use.getUseTarget().getActor(),
                             (ProcedureDefinition) containingScript,
                             use.getUseTarget().getASTNode(),
                             null)); // TODO: Where is the relevant metadata
@@ -98,5 +98,10 @@ public class MissingInitialization implements IssueFinder {
     @Override
     public IssueType getIssueType() {
         return IssueType.BUG;
+    }
+
+    @Override
+    public void setIgnoreLooseBlocks(boolean value) {
+        // Irrelevant for this finder
     }
 }

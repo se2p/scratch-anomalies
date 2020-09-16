@@ -18,6 +18,7 @@
  */
 package de.uni_passau.fim.se2.litterbox.analytics;
 
+import de.uni_passau.fim.se2.litterbox.ast.model.event.Never;
 import de.uni_passau.fim.se2.litterbox.ast.model.ASTNode;
 import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
@@ -29,10 +30,7 @@ import de.uni_passau.fim.se2.litterbox.ast.parser.symboltable.ProcedureInfo;
 import de.uni_passau.fim.se2.litterbox.ast.visitor.ScratchVisitor;
 import de.uni_passau.fim.se2.litterbox.utils.Preconditions;
 
-import java.util.Collections;
-import java.util.LinkedHashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 public abstract class AbstractIssueFinder implements IssueFinder, ScratchVisitor {
 
@@ -42,6 +40,7 @@ public abstract class AbstractIssueFinder implements IssueFinder, ScratchVisitor
     protected Set<Issue> issues = new LinkedHashSet<>();
     protected Map<LocalIdentifier, ProcedureInfo> procMap;
     protected Program program;
+    protected boolean ignoreLooseBlocks = false;
 
     @Override
     public Set<Issue> check(Program program) {
@@ -62,6 +61,10 @@ public abstract class AbstractIssueFinder implements IssueFinder, ScratchVisitor
 
     @Override
     public void visit(Script script) {
+        if (ignoreLooseBlocks && script.getEvent() instanceof Never) {
+            // Ignore unconnected blocks
+            return;
+        }
         currentScript = script;
         currentProcedure = null;
         visitChildren(script);
@@ -76,18 +79,26 @@ public abstract class AbstractIssueFinder implements IssueFinder, ScratchVisitor
 
     protected void addIssue(ASTNode node, Metadata metadata) {
         if (currentScript != null) {
-            issues.add(new Issue(this, currentActor, currentScript, node, metadata));
+            issues.add(new Issue(this, program, currentActor, currentScript, node, metadata));
         } else {
             assert (currentProcedure != null);
-            issues.add(new Issue(this, currentActor, currentProcedure, node, metadata));
+            issues.add(new Issue(this, program, currentActor, currentProcedure, node, metadata));
         }
     }
 
+    protected void addIssueForSynthesizedScript(Script theScript, ASTNode node, Metadata metadata) {
+        issues.add(new Issue(this, program, currentActor, theScript, node, metadata));
+    }
+
     protected void addIssueWithLooseComment() {
-        issues.add(new Issue(this, currentActor,
+        issues.add(new Issue(this, program, currentActor,
                 (Script) null, // TODO: There is no script
                 currentActor, // TODO: There is no node?
                 null)); // TODO: There is no metadata
+    }
+
+    public void setIgnoreLooseBlocks(boolean value) {
+        ignoreLooseBlocks = value;
     }
 
     public abstract IssueType getIssueType();
