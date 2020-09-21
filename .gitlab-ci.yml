@@ -12,8 +12,8 @@ cache:
     - .m2/repository/
     - target/
 
-before_script:
-  - mvn install:install-file -Dfile=lib/oumextractor.jar  -DgroupId=org.softevo.oumextractor -DartifactId=oumextractor -Dversion=1.0 -Dpackaging=jar
+#before_script:
+#  - mvn install:install-file -Dfile=lib/oumextractor.jar  -DgroupId=org.softevo.oumextractor -DartifactId=oumextractor -Dversion=1.0 -Dpackaging=jar
 
 build:
   stage: build
