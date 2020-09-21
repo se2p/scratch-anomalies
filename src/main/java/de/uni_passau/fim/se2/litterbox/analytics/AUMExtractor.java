@@ -496,7 +496,7 @@ public class AUMExtractor {
      * @throws FileNotFoundException if creating the AUMExtractor fails.
      */
     public static void main(String[] args) throws IOException, ParsingException {
-        AUMExtractor extractor = new AUMExtractor("/home/nina//Studium/papers/anomaly-detection-in-scratch/projects/sb3/", "/home/nina/Studium/papers/anomaly-detection-in-scratch/dotout/", "/home/nina/Studium/papers/anomaly-detection-in-scratch/ser/");
+        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/bugpattern", "out/dot", "out/ser");
         extractor.runAnalysis();
     }
 }
