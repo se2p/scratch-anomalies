@@ -306,7 +306,8 @@ public class AUMVisitor implements ScratchVisitor {
         model2id.put(toAdd, modelsCreated);
         String methodName = type + ": " + eventName;
         String className = "program: " + programName + " actor: " + currentActorName;
-        id2modelData.put(modelsCreated, new ModelData(className, methodName, ACTOR));
+        String uniqueMethodId = methodName + modelsCreated; // this has to be unique for JADET to work properly!
+        id2modelData.put(modelsCreated, new ModelData(className, uniqueMethodId, ACTOR));
         clear();
     }
 
