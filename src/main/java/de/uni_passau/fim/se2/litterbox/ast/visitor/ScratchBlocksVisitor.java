@@ -148,6 +148,15 @@ public class ScratchBlocksVisitor extends PrintVisitor {
         currentActor = node;
     }
 
+    public void setProgram(Program program) {
+        this.program = program;
+    }
+
+    public void resetOutput() {
+        byteStream = new ByteArrayOutputStream();
+        printStream = new PrintStream(byteStream);
+    }
+
     @Override
     public void visit(ActorDefinition node) {
         currentActor = node;

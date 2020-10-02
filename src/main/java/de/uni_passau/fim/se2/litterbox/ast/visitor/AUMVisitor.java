@@ -175,6 +175,8 @@ public class AUMVisitor implements ScratchVisitor {
      */
     private boolean endAnalysis = false;
 
+    private final ScratchBlocksVisitor scratchBlocksVisitor = new ScratchBlocksVisitor();
+
     /**
      * Creates a new instance of this visitor.
      *
@@ -257,6 +259,7 @@ public class AUMVisitor implements ScratchVisitor {
         className = className.replace(";", "_semicolon_");
         className = className.replace(File.separator, "_slash_");
         String methodName = modelData.getMethodName();
+        methodName = methodName.substring(0, methodName.indexOf("scratchblocks:") - 1);
         methodName = methodName.replace(" ", "_");
         methodName = methodName.replace(":", "_colon_");
         methodName = methodName.replace(";", "_semicolon_");
@@ -273,9 +276,9 @@ public class AUMVisitor implements ScratchVisitor {
      * @param procDefId The ID of the procedure definition analysis of which
      *                  resulted in the model to add.
      */
-    public void endProcDefAnalysis(Model toAdd, String procDefId) {
+    public void endProcDefAnalysis(Model toAdd, String procDefId, String scratchBlocksOut) {
         extractor.newProcDefAnalysed();
-        endAnalysis(toAdd, procDefId, PROC_DEF);
+        endAnalysis(toAdd, procDefId, PROC_DEF, scratchBlocksOut);
     }
 
     /**
@@ -284,9 +287,9 @@ public class AUMVisitor implements ScratchVisitor {
      * @param toAdd    The model to be added to the models to serialise.
      * @param eventName The name of the hat block of the script analysis of which resulted in the model to add.
      */
-    public void endScriptAnalysis(Model toAdd, String eventName) {
+    public void endScriptAnalysis(Model toAdd, String eventName, String scratchBlocksOut) {
         extractor.newScriptAnalysed();
-        endAnalysis(toAdd, eventName, SCRIPT);
+        endAnalysis(toAdd, eventName, SCRIPT, scratchBlocksOut);
     }
 
     /**
@@ -297,7 +300,7 @@ public class AUMVisitor implements ScratchVisitor {
      *                  analysis of which resulted in the model to add.
      * @param type      Either script or procedure definition.
      */
-    private void endAnalysis(Model toAdd, String eventName, String type) {
+    private void endAnalysis(Model toAdd, String eventName, String type, String scratchBlocksOut) {
         for (Integer id : states.keySet()) {
             assert (id == states.get(id).getId());
         }
@@ -307,7 +310,7 @@ public class AUMVisitor implements ScratchVisitor {
         String methodName = type + ": " + eventName;
         String className = "program: " + programName + " actor: " + currentActorName;
         String uniqueMethodId = methodName + modelsCreated; // this has to be unique for JADET to work properly!
-        id2modelData.put(modelsCreated, new ModelData(className, uniqueMethodId, ACTOR));
+        id2modelData.put(modelsCreated, new ModelData(className, uniqueMethodId + " scratchblocks: " + scratchBlocksOut , ACTOR));
         clear();
     }
 
@@ -454,11 +457,13 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Program program) {
+        scratchBlocksVisitor.setProgram(program);
         assert !endAnalysis;
         extractor.newProjectPresent();
         programName = program.getIdent().getName();
         for (ActorDefinition def : program.getActorDefinitionList().getDefinitions()) {
             currentActorName = def.getIdent().getName();
+            scratchBlocksVisitor.setCurrentActor(def);
             for (ProcedureDefinition procDef : def.getProcedureDefinitionList().getList()) {
                 procDef.accept(this);
             }
@@ -479,6 +484,9 @@ public class AUMVisitor implements ScratchVisitor {
      */
     public void visit(ProcedureDefinition procDef) {
         assert !endAnalysis;
+        procDef.accept(scratchBlocksVisitor);
+        String scratchBlocksOut = scratchBlocksVisitor.getScratchBlocks();
+        scratchBlocksVisitor.resetOutput();
         extractor.newProcDefPresent();
         // add the procedure definition transition
         setTransitionStartTo(currentModel.getEntryState());
@@ -487,7 +495,7 @@ public class AUMVisitor implements ScratchVisitor {
         // add the statements
         List<Stmt> listOfStmt = procDef.getStmtList().getStmts();
         addStmtList(listOfStmt);
-        endProcDefAnalysis(new Model(currentModel), procDef.getIdent().getName());
+        endProcDefAnalysis(new Model(currentModel), procDef.getIdent().getName(), scratchBlocksOut);
     }
 
     /**
@@ -497,6 +505,9 @@ public class AUMVisitor implements ScratchVisitor {
      */
     @Override
     public void visit(Script script) {
+        script.accept(scratchBlocksVisitor);
+        String scratchBlocksOut = scratchBlocksVisitor.getScratchBlocks();
+        scratchBlocksVisitor.resetOutput();
         assert !endAnalysis;
         extractor.newScriptPresent();
         // add the event transition
@@ -504,7 +515,7 @@ public class AUMVisitor implements ScratchVisitor {
         // add the statements
         List<Stmt> listOfStmt = script.getStmtList().getStmts();
         addStmtList(listOfStmt);
-        endScriptAnalysis(new Model(currentModel), script.getEvent().getUniqueName());
+        endScriptAnalysis(new Model(currentModel), script.getEvent().getUniqueName(), scratchBlocksOut);
     }
 
     /**
