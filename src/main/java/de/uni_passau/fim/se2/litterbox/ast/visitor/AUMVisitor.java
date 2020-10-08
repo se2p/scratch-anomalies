@@ -77,7 +77,7 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Prefix for the generated dotfiles.
      */
-    public static final String DOTFILE_PREFIX = "aum-with";
+    public static final String DOTFILE_PREFIX = "aum";
 
     /**
      * File extension for dotfiles.
@@ -254,19 +254,16 @@ public class AUMVisitor implements ScratchVisitor {
         ModelData modelData = id2modelData.get(model2id.get(model));
         String className = modelData.getClassName();
         // the replacements are there to make sure that file names work but we can reverse engineer the method names afterwards
-        className = className.replace(" ", "_");
-        className = className.replace(":", "_colon_");
-        className = className.replace(";", "_semicolon_");
-        className = className.replace(File.separator, "_slash_");
+        className = encode(className);
         String methodName = modelData.getMethodName();
-        methodName = methodName.substring(0, methodName.indexOf("scratchblocks:") - 1);
-        methodName = methodName.replace(" ", "_");
-        methodName = methodName.replace(":", "_colon_");
-        methodName = methodName.replace(";", "_semicolon_");
-        methodName = methodName.replace(File.separator, "_slash_");
+        methodName = encode(methodName);
         File dotfile = new File(dotOutputPath, DOTFILE_PREFIX + i + "_" + className + "_" + methodName + DOTFILE_EXTENSION);
         dotfile.createNewFile();
         model.saveToDotFile(dotfile);
+    }
+
+    private static String encode(String name) {
+        return name.replace(":", "");
     }
 
     /**
