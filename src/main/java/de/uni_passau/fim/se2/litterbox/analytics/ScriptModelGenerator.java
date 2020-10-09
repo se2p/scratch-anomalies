@@ -23,7 +23,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import de.uni_passau.fim.se2.litterbox.ast.ParsingException;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.parser.ProgramParser;
-import de.uni_passau.fim.se2.litterbox.ast.visitor.AUMVisitor;
+import de.uni_passau.fim.se2.litterbox.ast.visitor.ScriptModelVisitor;
 import de.uni_passau.fim.se2.litterbox.utils.JsonParser;
 import de.uni_passau.fim.se2.litterbox.utils.ZipReader;
 import org.apache.commons.io.FilenameUtils;
@@ -90,7 +90,7 @@ public class ScriptModelGenerator {
     /**
      * The visitor used for creating the AUMs.
      */
-    private final AUMVisitor visitor;
+    private final ScriptModelVisitor visitor;
 
     /**
      * Number of projects present.
@@ -171,7 +171,7 @@ public class ScriptModelGenerator {
             prepareOutFolders();
             initStreams(aumOutputPath);
             setPrograms();
-            visitor = new AUMVisitor(this);
+            visitor = new ScriptModelVisitor(this);
         }
     }
 

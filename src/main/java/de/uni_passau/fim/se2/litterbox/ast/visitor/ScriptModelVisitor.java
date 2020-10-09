@@ -47,16 +47,16 @@ import java.util.logging.Logger;
  *
  * @author Nina Körber
  */
-public class AUMVisitor implements ScratchVisitor {
+public class ScriptModelVisitor implements ScratchVisitor {
 
     /**
      * Logger to be used by this class.
      */
     private final static Logger logger =
-            Logger.getLogger(AUMVisitor.class.getName());
+            Logger.getLogger(ScriptModelVisitor.class.getName());
 
     static {
-        AUMVisitor.logger.setLevel(Level.ALL);
+        ScriptModelVisitor.logger.setLevel(Level.ALL);
     }
 
     /**
@@ -188,7 +188,7 @@ public class AUMVisitor implements ScratchVisitor {
      * @param extractor The {@link ScriptModelGenerator} instance this visitor belongs to.
      */
     @SuppressWarnings({"ConstantConditions"})
-    public AUMVisitor(ScriptModelGenerator extractor) {
+    public ScriptModelVisitor(ScriptModelGenerator extractor) {
         this.extractor = extractor;
         this.programs = extractor.getPrograms();
         this.dotOutputPath = extractor.getDotOutputPath();
