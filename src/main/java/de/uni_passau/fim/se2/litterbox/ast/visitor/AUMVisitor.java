@@ -77,12 +77,17 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Prefix for the generated dotfiles.
      */
-    public static final String DOTFILE_PREFIX = "aum";
+    public static final String DOTFILE_PREFIX = "script model of";
 
     /**
      * File extension for dotfiles.
      */
     public static final String DOTFILE_EXTENSION = ".dot";
+
+    /**
+     * Prefix of scratchblocks output in script names.
+     */
+    public static final String SCRATCHBLOCKS_PREFIX = "scratchblocks: ";
 
     /**
      * Name of repeat forever loop transitions.
@@ -253,17 +258,27 @@ public class AUMVisitor implements ScratchVisitor {
     private void saveToDotfile(int i, Model model) throws IOException {
         ModelData modelData = id2modelData.get(model2id.get(model));
         String className = modelData.getClassName();
-        // the replacements are there to make sure that file names work but we can reverse engineer the method names afterwards
-        className = encode(className);
-        String methodName = modelData.getMethodName();
-        methodName = encode(methodName);
-        File dotfile = new File(dotOutputPath, DOTFILE_PREFIX + i + "_" + className + "_" + methodName + DOTFILE_EXTENSION);
+        className = removeInvalidFileChars(className);
+        String methodName = getMethodNameForFile(modelData);
+        File dotfile = new File(dotOutputPath, DOTFILE_PREFIX + " " + className + " " + methodName + DOTFILE_EXTENSION);
         dotfile.createNewFile();
         model.saveToDotFile(dotfile);
     }
 
-    private static String encode(String name) {
-        return name.replace(":", "");
+    private String getMethodNameForFile(ModelData modelData) {
+        String methodName = modelData.getMethodName();
+        if (methodName.startsWith("procedure")) {
+            String originalMethodName = modelData.getMethodName();
+            methodName = "procedure " + originalMethodName.substring(originalMethodName.indexOf(SCRATCHBLOCKS_PREFIX) + SCRATCHBLOCKS_PREFIX.length(), originalMethodName.indexOf("\n"));
+        } else {
+            methodName = methodName.substring(0, methodName.indexOf(SCRATCHBLOCKS_PREFIX) - 1);
+        }
+        methodName = removeInvalidFileChars(methodName);
+        return methodName;
+    }
+
+    private static String removeInvalidFileChars(String name) {
+        return name.replace(":", "").replace("/", "");
     }
 
     /**

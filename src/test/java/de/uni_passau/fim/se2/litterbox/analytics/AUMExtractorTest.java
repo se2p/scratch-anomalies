@@ -120,7 +120,7 @@ public class AUMExtractorTest {
     public void testDotfileGenerationNoSeparator(@TempDir File tempDir) throws Exception {
         AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/foreverInProcedure", tempDir.toString(), tempDir.toString());
         extractor.runAnalysis();
-        File dotfile = new File(tempDir, "aum-with1_program_colon__foreverInProcedure.json_actor_colon__Sprite1_procedure_colon__C@E9|Js{46hHKa,_D!_semicolon_f1.dot");
+        File dotfile = new File(tempDir, "script model of program foreverInProcedure.json actor Sprite1 procedure define test.dot");
         assertTrue(dotfile.exists());
     }
 
@@ -128,7 +128,7 @@ public class AUMExtractorTest {
     public void testDotfileGenerationSeparatorPresent(@TempDir File tempDir) throws Exception {
         AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/foreverInProcedure", tempDir.toString() + File.separator, tempDir.toString() + File.separator);
         extractor.runAnalysis();
-        File dotfile = new File(tempDir, "aum-with1_program_colon__foreverInProcedure.json_actor_colon__Sprite1_procedure_colon__C@E9|Js{46hHKa,_D!_semicolon_f1.dot");
+        File dotfile = new File(tempDir, "script model of program foreverInProcedure.json actor Sprite1 procedure define test.dot");
         assertTrue(dotfile.exists());
     }
 
