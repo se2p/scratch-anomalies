@@ -24,7 +24,6 @@ import de.uni_passau.fim.se2.litterbox.ast.ParsingException;
 import de.uni_passau.fim.se2.litterbox.utils.IssueTranslator;
 import org.apache.commons.cli.*;
 
-import java.io.File;
 import java.io.IOException;
 
 import static de.uni_passau.fim.se2.litterbox.utils.GroupConstants.*;
@@ -190,9 +189,9 @@ public class Main {
             pathToDotOut = cmd.getOptionValue(DOTOUT);
         }
 
-        AUMExtractor extractor = new AUMExtractor(pathToAnalyseFolder, pathToDotOut, pathToOutputFolder);
+        ScriptModelGenerator extractor = new ScriptModelGenerator(pathToAnalyseFolder, pathToDotOut, pathToOutputFolder);
         extractor.runAnalysis();
-        // TODO make AUMExtractor extend Analyzer?
+        // TODO make ScriptModelGenerator extend Analyzer?
     }
 
     static void statsPrograms(CommandLine cmd) throws ParseException, IOException, ParsingException {

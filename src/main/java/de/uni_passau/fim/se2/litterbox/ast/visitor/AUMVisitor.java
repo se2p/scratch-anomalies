@@ -18,7 +18,7 @@
  */
 package de.uni_passau.fim.se2.litterbox.ast.visitor;
 
-import de.uni_passau.fim.se2.litterbox.analytics.AUMExtractor;
+import de.uni_passau.fim.se2.litterbox.analytics.ScriptModelGenerator;
 import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
 import de.uni_passau.fim.se2.litterbox.ast.model.Script;
@@ -118,9 +118,9 @@ public class AUMVisitor implements ScratchVisitor {
     private final Map<Integer, ModelData> id2modelData = new HashMap<>();
 
     /**
-     * The AUMExtractor this visitor belongs to.
+     * The ScriptModelGenerator this visitor belongs to.
      */
-    private final AUMExtractor extractor;
+    private final ScriptModelGenerator extractor;
 
     /**
      * Models to serialise during next serialisation.
@@ -185,10 +185,10 @@ public class AUMVisitor implements ScratchVisitor {
     /**
      * Creates a new instance of this visitor.
      *
-     * @param extractor The {@link AUMExtractor} instance this visitor belongs to.
+     * @param extractor The {@link ScriptModelGenerator} instance this visitor belongs to.
      */
     @SuppressWarnings({"ConstantConditions"})
-    public AUMVisitor(AUMExtractor extractor) {
+    public AUMVisitor(ScriptModelGenerator extractor) {
         this.extractor = extractor;
         this.programs = extractor.getPrograms();
         this.dotOutputPath = extractor.getDotOutputPath();

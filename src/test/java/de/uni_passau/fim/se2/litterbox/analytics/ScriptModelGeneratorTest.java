@@ -32,11 +32,11 @@ import java.util.Map;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
-public class AUMExtractorTest {
+public class ScriptModelGeneratorTest {
 
     @Test
     public void testFileCreation(@TempDir File tempDir) throws Exception {
-        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/", null, tempDir.toString());
+        ScriptModelGenerator extractor = new ScriptModelGenerator("src/test/fixtures/aums/", null, tempDir.toString());
         extractor.runAnalysis();
 
         File typesnames = new File(tempDir, "typesnames.ser");
@@ -54,7 +54,7 @@ public class AUMExtractorTest {
 
     @Test
     public void testTerminatedForeverModel(@TempDir File tempDir) throws Exception {
-        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/terminatedForever", null, tempDir.toString());
+        ScriptModelGenerator extractor = new ScriptModelGenerator("src/test/fixtures/aums/terminatedForever", null, tempDir.toString());
         extractor.runAnalysis();
 
         Map<Integer, ModelData> id2data = getId2ModelData(tempDir);
@@ -74,7 +74,7 @@ public class AUMExtractorTest {
 
     @Test
     public void testForeverInProcedure(@TempDir File tempDir) throws Exception {
-        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/foreverInProcedure", null, tempDir.toString());
+        ScriptModelGenerator extractor = new ScriptModelGenerator("src/test/fixtures/aums/foreverInProcedure", null, tempDir.toString());
         extractor.runAnalysis();
 
         Map<Integer, ModelData> id2ModelData = getId2ModelData(tempDir);
@@ -92,7 +92,7 @@ public class AUMExtractorTest {
 
     @Test
     public void testControlStmts(@TempDir File tempDir) throws Exception {
-        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/controlStmts/", null, tempDir.toString());
+        ScriptModelGenerator extractor = new ScriptModelGenerator("src/test/fixtures/aums/controlStmts/", null, tempDir.toString());
         extractor.runAnalysis();
 
         Map<Integer, ModelData> id2ModelData = getId2ModelData(tempDir);
@@ -118,7 +118,7 @@ public class AUMExtractorTest {
 
     @Test
     public void testDotfileGenerationNoSeparator(@TempDir File tempDir) throws Exception {
-        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/foreverInProcedure", tempDir.toString(), tempDir.toString());
+        ScriptModelGenerator extractor = new ScriptModelGenerator("src/test/fixtures/aums/foreverInProcedure", tempDir.toString(), tempDir.toString());
         extractor.runAnalysis();
         File dotfile = new File(tempDir, "script model of program foreverInProcedure.json actor Sprite1 procedure define test.dot");
         assertTrue(dotfile.exists());
@@ -126,7 +126,7 @@ public class AUMExtractorTest {
 
     @Test
     public void testDotfileGenerationSeparatorPresent(@TempDir File tempDir) throws Exception {
-        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/aums/foreverInProcedure", tempDir.toString() + File.separator, tempDir.toString() + File.separator);
+        ScriptModelGenerator extractor = new ScriptModelGenerator("src/test/fixtures/aums/foreverInProcedure", tempDir.toString() + File.separator, tempDir.toString() + File.separator);
         extractor.runAnalysis();
         File dotfile = new File(tempDir, "script model of program foreverInProcedure.json actor Sprite1 procedure define test.dot");
         assertTrue(dotfile.exists());

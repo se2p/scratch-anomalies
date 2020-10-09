@@ -43,11 +43,11 @@ import static java.util.Objects.requireNonNull;
  *
  * @author Nina Körber
  */
-public class AUMExtractor {
+public class ScriptModelGenerator {
     /**
      * Logger to be used by this class.
      */
-    private final static Logger logger = Logger.getLogger(AUMExtractor.class.getName());
+    private final static Logger logger = Logger.getLogger(ScriptModelGenerator.class.getName());
 
     /**
      * Start time of the analysis.
@@ -158,7 +158,7 @@ public class AUMExtractor {
      *                           models are created.
      * @throws FileNotFoundException If creation of the print streams fails.
      */
-    public AUMExtractor(String analysisFolderPath, String dotOutputPath, String aumOutputPath) throws FileNotFoundException {
+    public ScriptModelGenerator(String analysisFolderPath, String dotOutputPath, String aumOutputPath) throws FileNotFoundException {
         this.dotOutputPath = dotOutputPath;
 
         analysisFolder = new File(analysisFolderPath);
@@ -214,7 +214,7 @@ public class AUMExtractor {
     private void initStreams(String outputFolderPath) throws FileNotFoundException {
         summaryStream = new PrintStream(new FileOutputStream(outputFolderPath + File.separator + "summary.txt"));
         exceptionsStream = new PrintStream(new FileOutputStream(outputFolderPath + File.separator + "exceptions.txt"));
-        exceptionsStream.println("Exceptions of another successful LitterBox AUMExtractor run:");
+        exceptionsStream.println("Exceptions of another successful LitterBox ScriptModelGenerator run:");
         exceptionsStream.println("Start of analysis: " + start.format(DateTimeFormatter.ISO_DATE)
                 + " " + start.format(DateTimeFormatter.ISO_TIME));
         exceptionsStream.println();
@@ -431,7 +431,7 @@ public class AUMExtractor {
      * @param printStream The stream to be used for printing the summary.
      */
     private void printSummary(PrintStream printStream) {
-        printStream.println("Summary of another successful LitterBox AUMExtractor with control blocks run:");
+        printStream.println("Summary of another successful LitterBox ScriptModelGenerator with control blocks run:");
         printStream.println();
         printDuration(printStream);
         printStream.println();
@@ -493,10 +493,10 @@ public class AUMExtractor {
      * without using the command line.
      *
      * @param args Command line arguments.
-     * @throws FileNotFoundException if creating the AUMExtractor fails.
+     * @throws FileNotFoundException if creating the ScriptModelGenerator fails.
      */
     public static void main(String[] args) throws IOException, ParsingException {
-        AUMExtractor extractor = new AUMExtractor("src/test/fixtures/bugpattern", "out/dot", "out/ser");
+        ScriptModelGenerator extractor = new ScriptModelGenerator("src/test/fixtures/bugpattern", "out/dot", "out/ser");
         extractor.runAnalysis();
     }
 }
