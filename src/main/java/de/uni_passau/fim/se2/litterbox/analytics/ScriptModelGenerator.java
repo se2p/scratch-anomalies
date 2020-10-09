@@ -55,18 +55,18 @@ public class ScriptModelGenerator {
     private final LocalDateTime start = LocalDateTime.now();
 
     /**
-     * Folder in which the programs AUMs of which are to be created are.
+     * Folder in which the programs script models of which are to be created are.
      */
     private final File analysisFolder;
 
     /**
-     * Destination for the AUMs and the modelsdata, typesnames, index, summary and
+     * Destination for the script models and the modelsdata, typesnames, index, summary and
      * exceptions files.
      */
     private final File outputFolder;
 
     /**
-     * Path to a folder in which the dotfile representation of the AUMs has to be
+     * Path to a folder in which the dotfile representation of the script models has to be
      * stored. Null if no dotfile output is requested.
      */
     private final String dotOutputPath;
@@ -88,7 +88,7 @@ public class ScriptModelGenerator {
     private Set<String> programs;
 
     /**
-     * The visitor used for creating the AUMs.
+     * The visitor used for creating the script models.
      */
     private final ScriptModelVisitor visitor;
 
@@ -132,7 +132,7 @@ public class ScriptModelGenerator {
      * Number of programs analysis of which did not succeed because of an exception
      * in the {@code visitor}.
      */
-    private int skippedDueToAUMExtractor = 0;
+    private int skippedDueToScriptModelGenerator = 0;
 
     /**
      * Number of programs which were processed already, regardless of the result.
@@ -141,7 +141,7 @@ public class ScriptModelGenerator {
 
     /**
      * Number of exceptions which occurred during parsing and creation of the
-     * AUMs.
+     * script models.
      */
     private int exceptionsOccurred = 0;
 
@@ -150,26 +150,26 @@ public class ScriptModelGenerator {
      * Creates and empties the output folder(s), sets the set of program names
      * for the visitor and sets up the streams for summary and exception output.
      *
-     * @param analysisFolderPath Path to the folder containing the scratch
-     *                           programs to analyse.
-     * @param dotOutputPath      Path to the folder in which the dot files of the
-     *                           actor usage models are created.
-     * @param aumOutputPath      Path to the folder in which the actor usage
-     *                           models are created.
+     * @param analysisFolderPath    Path to the folder containing the scratch
+     *                              programs to analyse.
+     * @param dotOutputPath         Path to the folder in which the dot files of the
+     *                              actor usage models are created.
+     * @param scriptModelOutputPath Path to the folder in which the actor usage
+     *                              models are created.
      * @throws FileNotFoundException If creation of the print streams fails.
      */
-    public ScriptModelGenerator(String analysisFolderPath, String dotOutputPath, String aumOutputPath) throws FileNotFoundException {
+    public ScriptModelGenerator(String analysisFolderPath, String dotOutputPath, String scriptModelOutputPath) throws FileNotFoundException {
         this.dotOutputPath = dotOutputPath;
 
         analysisFolder = new File(analysisFolderPath);
-        outputFolder = new File(aumOutputPath);
+        outputFolder = new File(scriptModelOutputPath);
         if (!analysisFolder.exists()) {
             String msg = "Analysis folder does not exist: " + analysisFolder;
             logger.severe(msg);
             throw new RuntimeException(msg);
         } else {
             prepareOutFolders();
-            initStreams(aumOutputPath);
+            initStreams(scriptModelOutputPath);
             setPrograms();
             visitor = new ScriptModelVisitor(this);
         }
@@ -263,7 +263,7 @@ public class ScriptModelGenerator {
     }
 
     /**
-     * Returns the path to the destination for the AUMs and the modelsdata,
+     * Returns the path to the destination for the script models and the modelsdata,
      * typesnames, index, summary and exceptions files.
      *
      * @return The path of the output folder of {@code this}.
@@ -381,7 +381,7 @@ public class ScriptModelGenerator {
     }
 
     /**
-     * Creates AUMs for every script and procedure definition of the program.
+     * Creates script models for every script and procedure definition of the program.
      *
      * @param program   The program which is analysed.
      * @param fileEntry The file of the program.
@@ -391,10 +391,10 @@ public class ScriptModelGenerator {
             program.accept(visitor);
             successfullyAnalysed++;
         } catch (Exception e) {
-            skippedDueToAUMExtractor++;
+            skippedDueToScriptModelGenerator++;
             exceptionsOccurred++;
             printException(fileEntry, e);
-            logger.severe("Creating AUM for the project failed.");
+            logger.severe("Creating script model for the project failed.");
             visitor.rollbackAnalysis();
         }
     }
@@ -462,10 +462,10 @@ public class ScriptModelGenerator {
      */
     private void printStats(PrintStream printStream) {
         printStream.println("Skipped due to parsing: " + skippedDueToParsing + " projects.");
-        printStream.println("Skipped during creation of AUMs: " + skippedDueToAUMExtractor + " projects.");
+        printStream.println("Skipped during creation of script models: " + skippedDueToScriptModelGenerator + " projects.");
         printStream.println("Total number of exceptions which occurred: " + exceptionsOccurred);
         printStream.println("Projects for which analysis started: " + projectsPresent);
-        int totalProjects = skippedDueToAUMExtractor + skippedDueToParsing + successfullyAnalysed;
+        int totalProjects = skippedDueToScriptModelGenerator + skippedDueToParsing + successfullyAnalysed;
         printStream.println("Projects analysed/present: " + successfullyAnalysed + "/" + totalProjects);
         printStream.println("Scripts analysed/present: " + scriptsAnalysed + "/" + scriptsPresent);
         printStream.println("Procedure definitions analysed/present: " + procDefsAnalysed + "/" + procDefsPresent);

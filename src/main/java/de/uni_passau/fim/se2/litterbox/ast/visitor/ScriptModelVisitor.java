@@ -296,7 +296,7 @@ public class ScriptModelVisitor implements ScratchVisitor {
     /**
      * Called after analysis of a script is done.
      *
-     * @param toAdd    The model to be added to the models to serialise.
+     * @param toAdd     The model to be added to the models to serialise.
      * @param eventName The name of the hat block of the script analysis of which resulted in the model to add.
      */
     public void endScriptAnalysis(Model toAdd, String eventName, String scratchBlocksOut) {
@@ -322,7 +322,7 @@ public class ScriptModelVisitor implements ScratchVisitor {
         String methodName = type + ": " + eventName;
         String className = "program: " + programName + " actor: " + currentActorName;
         String uniqueMethodId = methodName + modelsCreated; // this has to be unique for JADET to work properly!
-        id2modelData.put(modelsCreated, new ModelData(className, uniqueMethodId + " scratchblocks: " + scratchBlocksOut , ACTOR));
+        id2modelData.put(modelsCreated, new ModelData(className, uniqueMethodId + " scratchblocks: " + scratchBlocksOut, ACTOR));
         clear();
     }
 
@@ -754,14 +754,14 @@ public class ScriptModelVisitor implements ScratchVisitor {
                     || foreverTrue && foreverFalse
                     || terminationTrue && foreverFalse
                     || foreverTrue && terminationFalse) {
-                // the if statement is blocking and the creation of this AUM
+                // the if statement is blocking and the creation of this script model
                 // should end
                 // add end of true branch only if it is not a forever
                 if (!foreverTrue) {
                     statesToExit.add(endOfTrueBranchStateId);
                 }
                 // add end of false branch only if it is not a forever
-                if(!foreverFalse) {
+                if (!foreverFalse) {
                     statesToExit.add(transitionEnd.getId());
                 }
                 endAnalysis = true;
@@ -869,7 +869,7 @@ public class ScriptModelVisitor implements ScratchVisitor {
             // add the true branch epsilon transition if there is neither a
             // termination statement at the end nor a repeat forever loop
             if (terminationStmtEndOfTrue) {
-                // add a transition to the exit state at the end of the AUM creation
+                // add a transition to the exit state at the end of the script model creation
                 statesToExit.add(endOfTrueBranchStateId);
             } else {
                 if (!foreverEndOfTrue) {
