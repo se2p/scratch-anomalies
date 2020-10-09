@@ -43,7 +43,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * Visitor used for creating actor usage models of scratch programs.
+ * Visitor used for creating script models of scratch programs.
  *
  * @author Nina Körber
  */
@@ -488,10 +488,10 @@ public class ScriptModelVisitor implements ScratchVisitor {
     }
 
     /**
-     * Creates an actor usage model of this procedure definition by iterating
+     * Creates an script model of this procedure definition by iterating
      * every statement.
      *
-     * @param procDef The procedure definition of which an actor usage model is
+     * @param procDef The procedure definition of which an script model is
      *                to be created.
      */
     public void visit(ProcedureDefinition procDef) {
@@ -511,9 +511,9 @@ public class ScriptModelVisitor implements ScratchVisitor {
     }
 
     /**
-     * Creates an actor usage model of this script by iterating every statement.
+     * Creates an script model of this script by iterating every statement.
      *
-     * @param script The script of which an actor usage model is to be created.
+     * @param script The script of which an script model is to be created.
      */
     @Override
     public void visit(Script script) {
@@ -657,7 +657,7 @@ public class ScriptModelVisitor implements ScratchVisitor {
     }
 
     /**
-     * Updates the actor usage model to contain all transitions related to this
+     * Updates the script model to contain all transitions related to this
      * loop, including its contained statements and the epsilon transition at
      * the end.
      *

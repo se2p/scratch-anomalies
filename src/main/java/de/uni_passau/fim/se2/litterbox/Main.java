@@ -38,8 +38,8 @@ public class Main {
     private static final String NONDET_SHORT = "n";
     private static final String STATS = "stats";
     private static final String STATS_SHORT = "s";
-    private static final String AUM = "aums";
-    private static final String AUM_SHORT = "m";
+    private static final String MODELS = "models";
+    private static final String MODELS_SHORT = "m";
     private static final String HELP = "help";
     private static final String HELP_SHORT = "h";
 
@@ -74,7 +74,7 @@ public class Main {
         mainMode.addOption(new Option(LEILA_SHORT, LEILA, false, "Translate specified Scratch projects to Leila"));
         mainMode.addOption(new Option(STATS_SHORT, STATS, false, "Extract metrics for Scratch projects"));
         mainMode.addOption(new Option(HELP_SHORT, HELP, false, "print this message"));
-        mainMode.addOption(new Option(AUM_SHORT, AUM, false, "generate actor usage models for these files, use with path for jsons and output for models"));
+        mainMode.addOption(new Option(MODELS_SHORT, MODELS, false, "generate script models for these files, use with path for jsons and output for models"));
 
         Options options = new Options();
         options.addOptionGroup(mainMode);
@@ -102,7 +102,7 @@ public class Main {
                         + "(file will be created if not existing yet, path has to exist)");
         options.addOption(ANNOTATE_SHORT, ANNOTATE, true, "path where scratch files with hints to bug patterns should"
                 + " be created");
-        options.addOption(DOTOUT_SHORT, DOTOUT, true, "path where dot files of AUMs should be created");
+        options.addOption(DOTOUT_SHORT, DOTOUT, true, "path where dot files of script models should be created");
 
         // Parameters
         options.addOption(DETECTORS_SHORT, DETECTORS, true, "name all detectors you want to run separated by ',' "
@@ -127,8 +127,8 @@ public class Main {
         System.out.println("Example for Leila intermediate language output: "
                 + "java -jar Litterbox-1.0.jar --leila -o ~/path/to/folder/or/file/for/the/output --path "
                 + "~/path/to/json/project/or/folder/with/projects \n");
-        System.out.println("Example for actor usage model output: "
-                + "java -jar Litterbox-1.0.jar --aum --path ~/path/to/"
+        System.out.println("Example for script model output: "
+                + "java -jar Litterbox-1.0.jar --models --path ~/path/to/"
                 + "folder/with/projects/to/analyse --output /path/to/output/folder\n");
 
         System.out.println("Detectors:");
@@ -181,7 +181,7 @@ public class Main {
         runAnalysis(cmd, analyzer);
     }
 
-    static void generateAUMs(CommandLine cmd) throws IOException, ParsingException {
+    static void generateScriptModels(CommandLine cmd) throws IOException, ParsingException {
         String pathToAnalyseFolder = cmd.getOptionValue(PROJECTPATH);
         String pathToOutputFolder = cmd.getOptionValue(OUTPUT);
         String pathToDotOut = null;
@@ -236,8 +236,8 @@ public class Main {
                 statsPrograms(cmd);
             } else if (cmd.hasOption(LEILA)) {
                 translatePrograms(cmd);
-            } else if (cmd.hasOption(AUM)) {
-                generateAUMs(cmd);
+            } else if (cmd.hasOption(MODELS)) {
+                generateScriptModels(cmd);
             } else {
                 printHelp();
             }

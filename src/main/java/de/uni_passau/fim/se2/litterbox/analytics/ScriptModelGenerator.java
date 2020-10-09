@@ -39,7 +39,7 @@ import java.util.logging.Logger;
 import static java.util.Objects.requireNonNull;
 
 /**
- * Used for generating actor usage models of scratch programs.
+ * Used for generating script models of scratch programs.
  *
  * @author Nina Körber
  */
@@ -153,9 +153,8 @@ public class ScriptModelGenerator {
      * @param analysisFolderPath    Path to the folder containing the scratch
      *                              programs to analyse.
      * @param dotOutputPath         Path to the folder in which the dot files of the
-     *                              actor usage models are created.
-     * @param scriptModelOutputPath Path to the folder in which the actor usage
-     *                              models are created.
+     *                              script models are created.
+     * @param scriptModelOutputPath Path to the folder in which the script models are created.
      * @throws FileNotFoundException If creation of the print streams fails.
      */
     public ScriptModelGenerator(String analysisFolderPath, String dotOutputPath, String scriptModelOutputPath) throws FileNotFoundException {
@@ -325,7 +324,7 @@ public class ScriptModelGenerator {
     }
 
     /**
-     * Creates actor usage models for the scratch programs in the analysis folder.
+     * Creates script models for the scratch programs in the analysis folder.
      */
     public void runAnalysis() throws IOException, ParsingException {
         for (File fileEntry : requireNonNull(analysisFolder.listFiles())) {
@@ -336,7 +335,7 @@ public class ScriptModelGenerator {
                         + percentProcessed + "% done): " + fileEntry.getName());
                 Program program = parseProgramFromFile(fileEntry);
                 if (program != null) {
-                    createActorUsageModels(program, fileEntry);
+                    createScriptModels(program, fileEntry);
                 }
             } else {
                 if (isSb3(fileEntry)) {
@@ -351,7 +350,7 @@ public class ScriptModelGenerator {
                     }
                     Program program = ProgramParser.parseProgram(fileEntry.getName(), node);
                     if (program != null) {
-                        createActorUsageModels(program, fileEntry);
+                        createScriptModels(program, fileEntry);
                     }
                 }
             }
@@ -386,7 +385,7 @@ public class ScriptModelGenerator {
      * @param program   The program which is analysed.
      * @param fileEntry The file of the program.
      */
-    private void createActorUsageModels(Program program, File fileEntry) {
+    private void createScriptModels(Program program, File fileEntry) {
         try {
             program.accept(visitor);
             successfullyAnalysed++;
