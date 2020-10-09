@@ -125,7 +125,7 @@
     <repositories>
         <repository>
             <id>oumextractor</id>
-            <url>file:/${basedir}/lib</url>
+            <url>${basedir}/lib</url>
         </repository>
     </repositories>
 
