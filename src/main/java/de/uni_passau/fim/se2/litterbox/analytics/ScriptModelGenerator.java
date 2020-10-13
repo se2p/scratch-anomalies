@@ -50,6 +50,12 @@ public class ScriptModelGenerator {
     private final static Logger logger = Logger.getLogger(ScriptModelGenerator.class.getName());
 
     /**
+     * Name of the LitterBox feature.
+     * GeSMo is short for Generator of Script Models.
+     */
+    private static final String TOOL_NAME = "GeSMo";
+
+    /**
      * Start time of the analysis.
      */
     private final LocalDateTime start = LocalDateTime.now();
@@ -430,7 +436,7 @@ public class ScriptModelGenerator {
      * @param printStream The stream to be used for printing the summary.
      */
     private void printSummary(PrintStream printStream) {
-        printStream.println("Summary of another successful LitterBox ScriptModelGenerator with control blocks run:");
+        printStream.println("Summary of another successful " + TOOL_NAME + " run:");
         printStream.println();
         printDuration(printStream);
         printStream.println();
