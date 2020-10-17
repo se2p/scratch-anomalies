@@ -17,7 +17,6 @@ For all JADET-related steps use the bash script in the JADET directory.
 To mine violations use 
 ```
 ./jadet -output-violations-xml -models-dir <path to models directory> 20 2 10000 0.9 <path to xml file>
-
 ```
 The values 20 and 2 are our suggested default values for the minimum support 
 (#scripts supporting a pattern) and minimum size (#temporal properties) of a pattern.
