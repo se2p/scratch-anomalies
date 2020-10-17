@@ -5,8 +5,8 @@ Anomaly detection is a quick way to find erroneous scripts, alternative solution
 - An adapted version of [JADET](https://www.st.cs.uni-saarland.de/models/jadet/) used for pattern and violation mining
 
 
-## How to Mine Patterns and Anomalies
-#### Script Model Generation
+# How to Mine Patterns and Anomalies
+## Script Model Generation
 LitterBox creates script models which are the input for JADET for both violation and pattern mining:
 ```
 java -jar Litterbox-1.3-SNAPSHOT.jar --models --path <path to projects directory> --output <path to models directory>
