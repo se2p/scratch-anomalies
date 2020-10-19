@@ -19,6 +19,7 @@
 package de.uni_passau.fim.se2.litterbox.analytics.smells;
 
 import de.uni_passau.fim.se2.litterbox.analytics.AbstractIssueFinder;
+import de.uni_passau.fim.se2.litterbox.analytics.Hint;
 import de.uni_passau.fim.se2.litterbox.analytics.IssueType;
 import de.uni_passau.fim.se2.litterbox.ast.model.ActorDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.Program;
@@ -54,20 +55,25 @@ public class SpriteNaming extends AbstractIssueFinder {
 
     private void checkName(String name) {
         String trimmedName = name;
-        while (Character.isDigit(trimmedName.charAt(trimmedName.length() - 1))
-                || Character.isWhitespace(trimmedName.charAt(trimmedName.length() - 1))) {
+        while (trimmedName.length() > 0 && (Character.isDigit(trimmedName.charAt(trimmedName.length() - 1))
+                || Character.isWhitespace(trimmedName.charAt(trimmedName.length() - 1)))) {
             trimmedName = trimmedName.substring(0, trimmedName.length() - 1);
         }
+
         for (String standard : SPRITE_LANGUAGES) {
             if (trimmedName.equals(standard)) {
-                addIssueWithLooseComment();
+                Hint hint = new Hint(getName());
+                hint.setParameter(Hint.HINT_SPRITE, name);
+                addIssueWithLooseComment(hint);
                 visitedNames.add(trimmedName);
                 return;
             }
         }
         for (String visitedName : visitedNames) {
             if (trimmedName.equals(visitedName)) {
-                addIssueWithLooseComment();
+                Hint hint = new Hint(getName());
+                hint.setParameter(Hint.HINT_SPRITE, name);
+                addIssueWithLooseComment(hint);
                 visitedNames.add(trimmedName);
                 return;
             }
