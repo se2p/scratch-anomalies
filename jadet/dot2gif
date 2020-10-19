@@ -1,0 +1,2 @@
+#!/bin/sh
+ccomps -x "$1" | dot | gvpack | neato -n2 -s -Tgif -o "$2"

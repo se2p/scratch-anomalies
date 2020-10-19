@@ -1,0 +1,420 @@
+#!/bin/bash
+
+
+
+##
+## Options to be used when invoking Java
+## Use 120G for runs on large datasets on the cluster
+##
+java_options="-ea -Xmx8G"
+
+
+
+##
+## Classpath part to be used in all invocations of Java
+##
+classpath=bin:\
+lib/catools.jar:\
+lib/cmdline.jar:\
+lib/colibri.jar:\
+lib/commons-lang-2.3.jar:\
+lib/jcommon-1.0.16.jar:\
+lib/jfreechart-1.0.13.jar:\
+lib/jutil.jar:\
+lib/lwp.jar:\
+lib/oumextractor.jar
+
+
+
+##
+## Main class of JADET
+##
+jadet=org.softevo.jadet.JADET
+
+
+
+##
+## Extracts options and arguments from given command-line.  Each option is
+## assumed to have format '-name value', with obligatory value.
+## @param 1-	command-line to extract options and arguments from
+## @param
+##		allowed_options					An array of all allowed options, with
+##										the leading '-'.
+##		allowed_options_take_values		An array of integers, 1 for options that
+##										take values and 0 for those that don't 
+## @return	0, if all options given were allowed, 1 otherwise
+## @return
+##		cmdline_options			An array of names of options, with the
+##								leading '-'.
+##		cmdline_options_values	An array of values of corresponding options.
+##		cmdline_arguments		An array of arguments.
+##
+parse_command_line ()
+{
+	unset cmdline_options
+	unset cmdline_options_values
+	unset cmdline_arguments
+	options_num=0
+	arguments_num=0
+
+	while test -n "$1"
+	do
+		if [ "${1:0:1}" = "-" ];
+			then {
+				option_valid=0
+				index=0
+				option_takes_parameter=0
+				while [ $index -lt ${#allowed_options} ]; do
+					option=${allowed_options[$index]}
+					if [ "$1" = "$option" ];
+						then {
+							option_valid=1
+							option_takes_parameter=${allowed_options_take_values[$index]}
+						}
+					fi
+					let index=index+1
+				done
+				if [ $option_valid -eq 0 ];
+					then {
+						return 1
+					}
+				fi
+				cmdline_options[$(($options_num))]=$1
+				cmdline_options_values[$(($options_num))]=
+				shift 1
+				if [ $option_takes_parameter -eq 1 ];
+					then {
+						cmdline_options_values[$(($options_num))]=$1
+						shift 1
+					}
+				fi
+				options_num=$(($options_num+1))
+			}
+			else {
+				cmdline_arguments[$(($arguments_num))]=$1
+				shift
+				arguments_num=$(($arguments_num+1))
+			}
+		fi
+	done
+	
+	return 0
+}
+
+
+
+##
+## Prints short help on how this script should be used.
+##
+print_usage ()
+{
+	echo "Usage:"
+	echo
+	echo "jadet -output-patterns (-models-dir MODELS_DIR | -input-name INPUT_NAME) [-xml] [-short] [-very-short] MIN_SUPPORT MIN_SIZE OUT_FILE"
+	echo "    (to output patterns in sca abstraction)"
+	echo "jadet -output-violations-xml (-models-dir MODELS_DIR | -input-name INPUT_NAME) MIN_SUPPORT MIN_SIZE MAX_DEV_LEVEL MIN_CONFIDENCE OUT_FILE"
+	echo "    (to output violations in sca abstraction)"
+	echo "jadet -edit-violations-xml VIOLATIONS_FILE"
+	echo "    (to view and edit sca abstraction violations)"
+	echo "jadet -copy-violations-xml TARGET_VIOLATIONS_FILE SOURCE_VIOLATIONS_FILE"
+	echo "    (to copy violations details between files)"
+	echo "jadet -visualize-pattern [-thesis] DOT_FILE PATTERN_FILE"
+	echo "    (to output a visualization of a given pattern)"
+	echo "jadet -visualize-all DOT_FOLDER PATTERN_FILE"
+	echo "    (to output output a visualization (dot-format) of all the patterns in the given file (JADET output format)"
+	echo "jadet -help"
+	echo "    (to print help on options)"
+	echo
+}
+
+
+
+##
+## Prints information, that given option was unrecognized.
+## @param 1		Option, that has been unrecognized.
+##
+unknown_option ()
+{
+	echo "Unknown option: "$1
+	echo "Use 'jadet -help' to get help"
+}
+
+
+
+##
+## Prints information, that given parameters of given command were not
+## recognized.
+## @param 1		Command that has been invoked.
+## @param 2-	Options that were given to the command (may be empty).
+##
+unknown_parameters ()
+{
+	command=$1
+	shift
+	echo "'"$command"' command does not recognize parameters '"$@"'"
+	echo "Use 'jadet -help' to get help"
+}
+
+
+
+##
+## Handles the 'help' command.
+## @param 1-	Options that were passed to the command.
+##
+print_help ()
+{
+	if test -z "$@";
+		then {
+			print_usage
+		}
+		else {
+			unknown_parameters "help" "$@"
+		}
+	fi
+}
+
+
+
+##
+## Transforms given directory into a classpath format containing all jars in
+## the directory.
+## @param 1		Directory to be transformed into a classpath.
+## @return
+## 		classpath_jars	Classpath format containing all jars in the given
+##						given directory.
+## 
+get_classpath_jars ()
+{
+	classpath_dir=$1
+	if test ${classpath_dir:${#classpath_dir}-1} = "/";
+		then {
+			classpath_dir=${classpath_dir:0:${#classpath_dir}-1}
+		}
+	fi
+	classpath_jars=
+	for jar in `find $classpath_dir -name '*.jar'`; do
+		classpath_jars=$classpath_jars:$jar
+	done
+	classpath_jars=${classpath_jars:1}
+}
+
+
+
+##
+## Prints short help on how the packaged program should be used.
+##
+print_internal_usage ()
+{
+	java $java_options -cp "$classpath" $jadet -help
+}
+
+
+
+##
+## Handles the 'output-patterns' command.
+## @param 1-	Options that were passed to the command.
+##
+output-patterns ()
+{
+	allowed_options=("-xml" "-short" "-very-short" "-models-dir" "-input-name")
+	allowed_options_take_values=(0 0 0 1 1)
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 3 && test $options_ok -eq 0;
+		then {
+			min_support=${cmdline_arguments[0]}
+			min_size=${cmdline_arguments[1]}
+			out_file=${cmdline_arguments[2]}
+			xml=""
+			short=""
+			very_short=""
+			models_dir=""
+			input_name=""
+			for (( i = 0; i < 4; i++ ))
+			do
+				case ${cmdline_options[$i]} in
+					"-xml") xml="-xml";;
+					"-short") short="-short";;
+					"-very-short") very_short="-very-short";;
+					"-models-dir") models_dir="-models-dir "${cmdline_options_values[$i]};;
+					"-input-name") input_name="-input-name "${cmdline_options_values[$i]};;
+				esac
+			done
+
+			java $java_options -cp "$classpath" $jadet -output-patterns "$models_dir" "$input_name" "$short" "$xml" "$very_short" "$min_support" "$min_size" "$out_file"
+		}
+		else {
+			unknown_parameters "output-patterns" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Handles the 'output-violations-xml' command.
+## @param 1-	Options that were passed to the command.
+##
+output-violations-xml ()
+{
+	allowed_options=("-models-dir" "-input-name")
+	allowed_options_take_values=(1 1)
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 5 && test $options_ok -eq 0;
+		then {
+			min_support=${cmdline_arguments[0]}
+			min_size=${cmdline_arguments[1]}
+			max_dev_level=${cmdline_arguments[2]}
+			min_confidence=${cmdline_arguments[3]}
+			out_file=${cmdline_arguments[4]}
+			models_dir=""
+			input_name=""
+			for (( i = 0; i < 2; i++ ))
+			do
+				case ${cmdline_options[$i]} in
+					"-models-dir") models_dir="-models-dir "${cmdline_options_values[$i]};;
+					"-input-name") input_name="-input-name "${cmdline_options_values[$i]};;
+				esac
+			done
+
+			java $java_options -cp "$classpath" $jadet -output-violations-xml "$models_dir" "$input_name" "$min_support" "$min_size" "$max_dev_level" "$min_confidence" "$out_file"
+		}
+		else {
+			unknown_parameters "output-violations" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Handles the 'edit-violations-xml' command.
+## @param 1-	Options that were passed to the command.
+##
+edit-violations-xml ()
+{
+	unset allowed_options
+	unset allowed_options_take_values
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 1 && test $options_ok -eq 0;
+		then {
+			violations_file=${cmdline_arguments[0]}
+			java $java_options -cp "$classpath" $jadet -edit-violations-xml "$violations_file"
+		}
+		else {
+			unknown_parameters "edit-violations" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Handles the 'copy-violations-xml' command.
+## @param 1-	Options that were passed to the command.
+##
+copy-violations-xml ()
+{
+	unset allowed_options
+	unset allowed_options_take_values
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 2 && test $options_ok -eq 0;
+		then {
+			target_violations_file=${cmdline_arguments[0]}
+			source_violations_file=${cmdline_arguments[1]}
+			java $java_options -cp "$classpath" $jadet -copy-violations-xml "$target_violations_file" "$source_violations_file"
+		}
+		else {
+			unknown_parameters "copy-violations-xml" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Handles the 'visualize-pattern' command.
+## @param 1-	Options that were passed to the command.
+##
+visualize-pattern ()
+{
+	allowed_options=("-thesis")
+	allowed_options_take_values=(0)
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 2 && test $options_ok -eq 0;
+		then {
+			dot_file=${cmdline_arguments[0]}
+			pattern_file=${cmdline_arguments[1]}
+			thesis=""
+			for (( i = 0; i < 1; i++ ))
+			do
+				case ${cmdline_options[$i]} in
+					"-thesis") thesis="-thesis";;
+				esac
+			done
+			java $java_options -cp "$classpath" $jadet -visualize-pattern "$thesis" "$dot_file" "$pattern_file"
+		}
+		else {
+			unknown_parameters "visualize-pattern" "$@"
+			print_usage
+		}
+	fi
+}
+
+visualize-all () 
+{
+	parse_command_line "$@"
+        options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 2 && test $options_ok -eq 0;
+		then {
+			dot_file=${cmdline_arguments[0]}
+			pattern_file=${cmdline_arguments[1]}
+			java $java_options -cp "$classpath" $jadet -visualize-all "$thesis" "$dot_file" "$pattern_file"
+		}
+		else {
+			unknown_parameters "visualize-all" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Main function of the script that dispatches the commands.
+## @param 1-	Arguments given to the script.
+##
+main ()
+{
+	if test -z "$1";
+		then {
+#			print_internal_usage
+			print_usage
+		}
+		else {
+			command="$1"
+			shift
+			case $command in
+				"-output-patterns") output-patterns "$@";;
+				"-output-violations-xml") output-violations-xml "$@";;
+				"-edit-violations-xml") edit-violations-xml "$@";;
+				"-copy-violations-xml") copy-violations-xml "$@";;
+				"-visualize-pattern") visualize-pattern "$@";;
+				"-visualize-all") visualize-all "$@";;
+				"-help") print_help "$@";;
+				*) unknown_option $command;;
+			esac
+		}
+	fi
+}
+
+
+main "$@"
