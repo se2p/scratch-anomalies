@@ -1,0 +1,352 @@
+#!/bin/bash
+
+
+
+##
+## Paths to internal Java class files
+##
+java_jars_dirs="/usr/lib/jvm"
+
+
+
+##
+## Options to be used when invoking Java
+##
+java_options="-Xmx1024M -ea -Dorg.softevo.oumextractor.javajarsdirs=$java_jars_dirs"
+
+
+
+##
+## Classpath part to be used in all invocations of Java
+##
+classpath=bin:\
+lib/asm-3.1.jar:\
+lib/asm-tree-3.1.jar:\
+lib/cmdline.jar:\
+lib/commons-lang-2.3.jar:\
+lib/jutil.jar
+
+
+##
+## Main class of the OUMExtractor
+##
+main=org.softevo.oumextractor.OUMExtractor
+
+
+
+##
+## Extracts options and arguments from given command-line.  Each option is
+## assumed to have format '-name value', with obligatory value.
+## @param 1-	command-line to extract options and arguments from
+## @param
+##		allowed_options					An array of all allowed options, with
+##										the leading '-'.
+##		allowed_options_take_values		An array of integers, 1 for options that
+##										take values and 0 for those that don't 
+## @return	0, if all options given were allowed, 1 otherwise
+## @return
+##		cmdline_options			An array of names of options, with the
+##								leading '-'.
+##		cmdline_options_values	An array of values of corresponding options.
+##		cmdline_arguments		An array of arguments.
+##
+parse_command_line ()
+{
+	unset cmdline_options
+	unset cmdline_options_values
+	unset cmdline_arguments
+	options_num=0
+	arguments_num=0
+
+	while test -n "$1"
+	do
+		if [ "${1:0:1}" = "-" ];
+			then {
+				option_valid=0
+				index=0
+				option_takes_parameter=0
+				while [ $index -lt ${#allowed_options} ]; do
+					option=${allowed_options[$index]}
+					if [ "$1" = "$option" ];
+						then {
+							option_valid=1
+							option_takes_parameter=${allowed_options_take_values[$index]}
+						}
+					fi
+					let index=index+1
+				done
+				if [ $option_valid -eq 0 ];
+					then {
+						return 1
+					}
+				fi
+				cmdline_options[$(($options_num))]=$1
+				cmdline_options_values[$(($options_num))]=
+				shift 1
+				if [ $option_takes_parameter -eq 1 ];
+					then {
+						cmdline_options_values[$(($options_num))]=$1
+						shift 1
+					}
+				fi
+				options_num=$(($options_num+1))
+			}
+			else {
+				cmdline_arguments[$(($arguments_num))]=$1
+				shift
+				arguments_num=$(($arguments_num+1))
+			}
+		fi
+	done
+	
+	return 0
+}
+
+
+
+##
+## Prints short help on how this script should be used.
+##
+print_usage ()
+{
+	echo "Usage:"
+	echo
+	echo "oumextractor -create [-libs JARS] [-libdirs DIRS] JAR_FILE MODELS_DIR"
+	echo "    (to create object usage models based on static analysis)"
+	echo "oumextractor -createdir [-libs JARS] [-libdirs DIRS] JARS_DIR"
+	echo "                        MODELS_DIR"
+	echo "    (to create object usage models based on static analysis)"
+	echo "oumextractor -createfiles [-libs JARS] [-libdirs DIRS] CLASS_FILES MODELS_DIR"
+	echo "    (to create object usage models based on static analysis)"
+	echo "oumextractor -output .SER_FILES_DIR OUTPUT_DIR [MODELS_FILE]"
+	echo "    (to output object usage models as .dot files)"
+	echo "oumextractor -help"
+	echo "    (to print help on options)"
+	echo
+}
+
+
+
+##
+## Prints information, that given option was unrecognized.
+## @param 1		Option, that has been unrecognized.
+##
+unknown_option ()
+{
+	echo "Unknown option: "$1
+	echo "Use 'oumextractor -help' to get help"
+}
+
+
+
+##
+## Prints information, that given parameters of given command were not
+## recognized.
+## @param 1		Command that has been invoked.
+## @param 2-	Options that were given to the command (may be empty).
+##
+unknown_parameters ()
+{
+	command=$1
+	shift
+	echo "'"$command"' command does not recognize parameters '"$@"'"
+	echo "Use 'oumextractor -help' to get help"
+}
+
+
+
+##
+## Handles the 'help' command.
+## @param 1-	Options that were passed to the command.
+##
+print_help ()
+{
+	if test -z "$@";
+		then {
+			print_usage
+		}
+		else {
+			unknown_parameters "help" "$@"
+		}
+	fi
+}
+
+
+
+##
+## Prints short help on how the packaged program should be used.
+##
+print_internal_usage ()
+{
+	java $java_options -cp "$classpath" $main -help
+}
+
+
+
+##
+## Handles the 'create' command.
+## @param 1-	Options that were passed to the command.
+##
+create ()
+{
+	allowed_options=("-libs" "-libdirs")
+	allowed_options_take_values=(1 1)
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 2 && test $options_ok -eq 0;
+		then {
+			jar_file=${cmdline_arguments[0]}
+			models_dir=${cmdline_arguments[1]}
+			libs=""
+			libdirs=""
+			for (( i = 0; i < 2; i++ ))
+			do
+				case ${cmdline_options[$i]} in
+					"-libs") libs="-libs "${cmdline_options_values[$i]};;
+					"-libdirs") libdirs="-libdirs "${cmdline_options_values[$i]};;
+				esac
+			done
+
+			java $java_options -cp "$classpath" $main -create "$libs" "$libdirs" "$jar_file" "$models_dir"
+		}
+		else {
+			unknown_parameters "create" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Handles the 'createdir' command.
+## @param 1-	Options that were passed to the command.
+##
+createdir ()
+{
+	allowed_options=("-libs" "-libdirs")
+	allowed_options_take_values=(1 1)
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 2 && test $options_ok -eq 0;
+		then {
+			jars_dir=${cmdline_arguments[0]}
+			models_dir=${cmdline_arguments[1]}
+			libs=""
+			libdirs=""
+			for (( i = 0; i < 2; i++ ))
+			do
+				case ${cmdline_options[$i]} in
+					"-libs") libs="-libs "${cmdline_options_values[$i]};;
+					"-libdirs") libdirs="-libdirs "${cmdline_options_values[$i]};;
+				esac
+			done
+
+			java $java_options -cp "$classpath" $main -createdir "$libs" "$libdirs" "$jars_dir" "$models_dir"
+		}
+		else {
+			unknown_parameters "createdir" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Handles the 'createfiles' command.
+## @param 1-	Options that were passed to the command.
+##
+createfiles ()
+{
+	allowed_options=("-libs" "-libdirs")
+	allowed_options_take_values=(1 1)
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -eq 2 && test $options_ok -eq 0;
+		then {
+			class_files=${cmdline_arguments[0]}
+			models_dir=${cmdline_arguments[1]}
+			libs=""
+			libdirs=""
+			for (( i = 0; i < 2; i++ ))
+			do
+				case ${cmdline_options[$i]} in
+					"-libs") libs="-libs "${cmdline_options_values[$i]};;
+					"-libdirs") libdirs="-libdirs "${cmdline_options_values[$i]};;
+				esac
+			done
+
+			java $java_options -cp "$classpath" $main -createfiles "$libs" "$libdirs" "$class_files" "$models_dir"
+		}
+		else {
+			unknown_parameters "createfiles" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Handles the 'output' command.
+## @param 1-	Options that were passed to the command.
+##
+output ()
+{
+	unset allowed_options
+	unset allowed_options_take_values
+	parse_command_line "$@"
+	options_ok=$?
+	if test ${#cmdline_arguments[@]} -ge 2 && test ${#cmdline_arguments[@]} -le 3 && test $options_ok -eq 0;
+		then {
+			ser_files_dir=${cmdline_arguments[0]}
+			output_dir=${cmdline_arguments[1]}
+
+			if test ${#cmdline_arguments[@]} -eq 3;
+				then {
+					models_file=${cmdline_arguments[2]}
+					java $java_options -cp "$classpath" $main -output "$ser_files_dir" "$output_dir" "$models_file"
+				}
+				else {
+					java $java_options -cp "$classpath" $main -output "$ser_files_dir" "$output_dir"
+				}
+			fi
+		}
+		else {
+			unknown_parameters "output" "$@"
+			print_usage
+		}
+	fi
+}
+
+
+
+##
+## Main function of the script that dispatches the commands.
+## @param 1-	Arguments given to the script.
+##
+main ()
+{
+	if test -z "$1";
+		then {
+#			print_internal_usage
+			print_usage
+		}
+		else {
+			command="$1"
+			shift
+			case $command in
+				"-create") create "$@";;
+				"-createdir") createdir "$@";;
+				"-createfiles") createfiles "$@";;
+				"-output") output "$@";;
+				"-help") print_help "$@";;
+				*) unknown_option $command;;
+			esac
+		}
+	fi
+}
+
+
+main "$@"
