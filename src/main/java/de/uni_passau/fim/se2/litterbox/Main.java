@@ -55,7 +55,7 @@ public class Main {
     private static final String OUTPUT_LANG = "lang";
     private static final String OUTPUT_LANG_SHORT = "k";
     private static final String DOTOUT = "dotout";
-    private static final String DOTOUT_SHORT = "d";
+    private static final String DOTOUT_SHORT = "do";
     private static final String OUTPUT = "output";
     private static final String OUTPUT_SHORT = "o";
     private static final String ANNOTATE = "annotate";
