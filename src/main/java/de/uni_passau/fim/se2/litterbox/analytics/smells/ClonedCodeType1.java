@@ -16,8 +16,13 @@
  * You should have received a copy of the GNU General Public License
  * along with LitterBox. If not, see <http://www.gnu.org/licenses/>.
  */
-package de.uni_passau.fim.se2.litterbox.ast.parser.metadata;
+package de.uni_passau.fim.se2.litterbox.analytics.smells;
 
-class MonitorSliderMetadataTest {
+import de.uni_passau.fim.se2.litterbox.analytics.clonedetection.CodeClone;
 
+public class ClonedCodeType1 extends ClonedCode {
+
+    public ClonedCodeType1() {
+        super(CodeClone.CloneType.TYPE1, "clone_type_1");
+    }
 }

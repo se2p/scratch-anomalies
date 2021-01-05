@@ -1258,9 +1258,9 @@ public class ScratchBlocksVisitor extends PrintVisitor {
     @Override
     public void visit(ColorLiteral colorLiteral) {
         emitNoSpace("[#");
-        emitNoSpace(Long.toHexString(colorLiteral.getRed()));
-        emitNoSpace(Long.toHexString(colorLiteral.getGreen()));
-        emitNoSpace(Long.toHexString(colorLiteral.getBlue()));
+        emitNoSpace(String.format("%02x", colorLiteral.getRed()));
+        emitNoSpace(String.format("%02x", colorLiteral.getGreen()));
+        emitNoSpace(String.format("%02x", colorLiteral.getBlue()));
         emitNoSpace("]");
         storeNotesForIssue(colorLiteral);
     }
@@ -1842,12 +1842,14 @@ public class ScratchBlocksVisitor extends PrintVisitor {
     private void storeNotesForIssue(ASTNode node) {
         boolean hasIssue = false;
         for (Issue issue : issues) {
-            if (issue.getCodeLocation() == node) {
+            if (issue.isCodeLocation(node)) {
                 if (!hasIssue) {
                     emitNoSpace(":: #ff0000");
                 }
                 hasIssue = true;
-                issueNote.add(BUG_NOTE);
+                if (!issue.hasMultipleBlocks()) {
+                    issueNote.add(BUG_NOTE);
+                }
                 // TODO: In theory there could be multiple messages here...
                 // issueNote.add(issue.getTranslatedFinderName());
             }

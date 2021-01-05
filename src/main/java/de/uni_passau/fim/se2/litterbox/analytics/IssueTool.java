@@ -40,6 +40,7 @@ public class IssueTool {
         Map<String, IssueFinder> bugFinders = new LinkedHashMap<>();
         registerBugFinder(new AmbiguousCustomBlockSignature(), bugFinders);
         registerBugFinder(new AmbiguousParameterNameUsed(), bugFinders);
+        registerBugFinder(new BlockingIfElse(), bugFinders);
         registerBugFinder(new CallWithoutDefinition(), bugFinders);
         registerBugFinder(new ComparingLiterals(), bugFinders);
         registerBugFinder(new CustomBlockWithForever(), bugFinders);
@@ -48,6 +49,10 @@ public class IssueTool {
         registerBugFinder(new ExpressionAsTouchingOrColor(), bugFinders);
         registerBugFinder(new ForeverInsideLoop(), bugFinders);
         registerBugFinder(new IllegalParameterRefactor(), bugFinders);
+        registerBugFinder(new ImmediateDeleteCloneAfterBroadcast(), bugFinders);
+        registerBugFinder(new ImmediateStopAfterSay(), bugFinders);
+        registerBugFinder(new InappropriateHandlerDeleteClone(), bugFinders);
+        registerBugFinder(new InterruptedLoopSensing(), bugFinders);
         registerBugFinder(new MessageNeverReceived(), bugFinders);
         registerBugFinder(new MessageNeverSent(), bugFinders);
         registerBugFinder(new MissingAsk(), bugFinders);
@@ -86,6 +91,10 @@ public class IssueTool {
 
         // Smells
         registerSmellFinder(new AmbiguousParameterNameUnused(), smellFinders);
+        registerSmellFinder(new ClonedCodeType1(), smellFinders);
+        registerSmellFinder(new ClonedCodeType2(), smellFinders);
+        registerSmellFinder(new ClonedCodeType3(), smellFinders);
+        registerSmellFinder(new BusyWaiting(), smellFinders);
         registerSmellFinder(new DeadCode(), smellFinders);
         registerSmellFinder(new EmptyControlBody(), smellFinders);
         registerSmellFinder(new EmptyCustomBlock(), smellFinders);
@@ -97,6 +106,7 @@ public class IssueTool {
         registerSmellFinder(new DuplicatedScript(), smellFinders);
         registerSmellFinder(new DuplicateSprite(), smellFinders);
         registerSmellFinder(new LongScript(), smellFinders);
+        registerSmellFinder(new UnnecessaryLoop(), smellFinders);
         registerSmellFinder(new MiddleMan(), smellFinders);
         registerSmellFinder(new MultiAttributeModification(), smellFinders);
         registerSmellFinder(new NestedLoops(), smellFinders);

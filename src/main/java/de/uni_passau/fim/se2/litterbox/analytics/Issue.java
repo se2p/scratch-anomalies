@@ -40,7 +40,9 @@ public class Issue {
     private Program program;
     private Metadata metaData;
     private Hint hint;
+    private int id;
 
+    private static int globalIssueCount = 0;
     /**
      * Creates a new issue the contains the finder that created this issue, the actor in which the issue was found and
      * the ASTNode that is most specific to this issue.
@@ -62,6 +64,7 @@ public class Issue {
         this.node = currentNode;
         this.metaData = metaData;
         this.hint = hint;
+        this.id = globalIssueCount++;
         // Check that hints have actually been declared, otherwise
         // we might be missing translations
         assert (finder.getHintKeys().contains(hint.getHintKey()));
@@ -153,8 +156,28 @@ public class Issue {
         return node;
     }
 
+    public boolean isCodeLocation(ASTNode node) {
+        return this.node == node;
+    }
+
+    public boolean hasMultipleBlocks() {
+        return false;
+    }
+
     public Metadata getCodeMetadata() {
         return metaData;
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public boolean isSubsumedBy(Issue other) {
+        return finder.isSubsumedBy(this, other);
+    }
+
+    public boolean isDuplicateOf(Issue other) {
+        return finder.isDuplicateOf(this, other);
     }
 
 }

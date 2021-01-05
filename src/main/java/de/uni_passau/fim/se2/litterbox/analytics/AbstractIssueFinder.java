@@ -85,6 +85,10 @@ public abstract class AbstractIssueFinder implements IssueFinder, ScratchVisitor
         addIssue(node, metadata, IssueSeverity.HIGH, hint);
     }
 
+    protected void addIssue(Issue issue) {
+        issues.add(issue);
+    }
+
     protected void addIssue(ASTNode node, Metadata metadata, IssueSeverity severity, Hint hint) {
         if (currentScript != null) {
             issues.add(new Issue(this, severity, program, currentActor, currentScript, node, metadata, hint));
@@ -124,5 +128,51 @@ public abstract class AbstractIssueFinder implements IssueFinder, ScratchVisitor
     public Collection<String> getHintKeys() {
         // Default: Only one key with the name of the finder
         return Arrays.asList(getName());
+    }
+
+    @Override
+    public boolean isDuplicateOf(Issue first, Issue other) {
+        if (first == other) {
+            // Don't check against self
+            return false;
+        }
+        if (first.getFinder() != other.getFinder()) {
+            // Can only be a duplicate if it's the same finder
+            return false;
+        }
+
+        if (first.getScriptOrProcedureDefinition() == null) {
+            if (other.getScriptOrProcedureDefinition() != null) {
+                // Need to refer to same script
+                return false;
+            }
+        }
+
+        if (other.getScriptOrProcedureDefinition() == null) {
+            if (first.getScriptOrProcedureDefinition() != null) {
+                // Need to refer to same script
+                return false;
+            }
+        }
+
+        if (first.getScriptOrProcedureDefinition() == null && other.getScriptOrProcedureDefinition() == null) {
+            return false;
+        }
+
+        if (!first.getScriptOrProcedureDefinition().equals(other.getScriptOrProcedureDefinition())) {
+            // Need to refer to same script
+            return false;
+        }
+
+        if (first.getCodeLocation().equals(other.getCodeLocation())) {
+            // Same block, so assume it's a duplicate
+            return true;
+        }
+        return false;
+    }
+
+    @Override
+    public boolean isSubsumedBy(Issue first, Issue other) {
+        return false;
     }
 }

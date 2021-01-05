@@ -31,6 +31,7 @@ import de.uni_passau.fim.se2.litterbox.ast.model.metadata.Metadata;
 import de.uni_passau.fim.se2.litterbox.ast.model.procedure.ProcedureDefinition;
 import de.uni_passau.fim.se2.litterbox.ast.model.statement.Stmt;
 import de.uni_passau.fim.se2.litterbox.ast.model.variable.Parameter;
+import de.uni_passau.fim.se2.litterbox.ast.model.variable.ScratchList;
 import de.uni_passau.fim.se2.litterbox.ast.model.variable.Variable;
 import de.uni_passau.fim.se2.litterbox.ast.parser.symboltable.ArgumentInfo;
 import de.uni_passau.fim.se2.litterbox.ast.parser.symboltable.ExpressionListInfo;
@@ -75,17 +76,22 @@ public class VariableAsLiteral extends AbstractIssueFinder {
         String literal = node.getText();
         if (variablesInScope.contains(literal)) {
             Hint hint = new Hint(getName());
-            hint.setParameter(Hint.HINT_VARIABLE, "\"" + node.getText() + "\"");
+            hint.setParameter(Hint.HINT_VARIABLE, node.getText());
             if (currentExpression != null) {
-                addIssue(currentExpression, currentMetadata);
+                addIssue(currentExpression, currentMetadata, hint);
             } else {
-                addIssue(currentStatement, currentMetadata);
+                addIssue(currentStatement, currentMetadata, hint);
             }
         }
     }
 
     @Override
     public void visit(Variable node) {
+        // No-op
+    }
+
+    @Override
+    public void visit(ScratchList node) {
         // No-op
     }
 
@@ -144,6 +150,21 @@ public class VariableAsLiteral extends AbstractIssueFinder {
         }
         actor.getScripts().accept(this);
         actor.getProcedureDefinitionList().accept(this);
+    }
+
+    @Override
+    public boolean isSubsumedBy(Issue theIssue, Issue other) {
+        if (theIssue.getFinder() != this) {
+            return super.isSubsumedBy(theIssue, other);
+        }
+
+        if (other.getFinder() instanceof ComparingLiterals) {
+            if (theIssue.getCodeLocation().equals(other.getCodeLocation())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     @Override
