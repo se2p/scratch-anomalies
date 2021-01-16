@@ -322,7 +322,7 @@ public class ScriptModelVisitor implements ScratchVisitor {
         String methodName = type + ": " + eventName;
         String className = "program: " + programName + " actor: " + currentActorName;
         String uniqueMethodId = methodName + modelsCreated; // this has to be unique for JADET to work properly!
-        id2modelData.put(modelsCreated, new ModelData(className, uniqueMethodId + " scratchblocks: " + scratchBlocksOut, ACTOR));
+        id2modelData.put(modelsCreated, new ModelData(className, uniqueMethodId + " scratchblocks: " + scratchBlocksOut, currentActorName));
         clear();
     }
 
@@ -932,7 +932,7 @@ public class ScriptModelVisitor implements ScratchVisitor {
      */
     private void addTransition(State presentState, String stmtName) {
         assert !endAnalysis;
-        MethodCall methodCall = new MethodCall(ACTOR, stmtName);
+        MethodCall methodCall = new MethodCall(currentActorName, stmtName);
         InvokeMethodTransition transition = InvokeMethodTransition.get(methodCall, new ArrayList<>());
         State followUpState = currentModel.getFollowUpState(presentState, transition);
         states.put(followUpState.getId(), followUpState);
