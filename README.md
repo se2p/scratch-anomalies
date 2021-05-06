@@ -1,7 +1,7 @@
 # Anomaly Detection in Scratch
 
 Anomaly detection is a quick way to find erroneous scripts, alternative solutions or distinguished work in a set of Scratch programs which implement the same or similar tasks. To the best of our knowledge, this repository contains the first collection of tools for anomaly detection in Scratch: 
-- An extension of [LitterBox](https://github.com/se2p/LitterBox/) that is used for the generation of script models
+- An extension of [LitterBox](https://github.com/se2p/LitterBox/) that is used for the generation of script models - for the actor specific variant check out the branch ```script-model-generator-actor-specific```
 - An adapted version of [JADET](https://www.st.cs.uni-saarland.de/models/jadet/) used for pattern and violation mining
 - An adapted version of [OUMExtractor](https://www.st.cs.uni-saarland.de/models/jadet/), a dependency for LitterBox and JADET
 
