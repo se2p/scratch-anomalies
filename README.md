@@ -5,6 +5,13 @@ Anomaly detection is a quick way to find erroneous scripts, alternative solution
 - An adapted version of [JADET](https://www.st.cs.uni-saarland.de/models/jadet/) used for pattern and violation mining
 - An adapted version of [OUMExtractor](https://www.st.cs.uni-saarland.de/models/jadet/), a dependency for LitterBox and JADET
 
+# Publications
+## Conference Proceedings
+- Nina Körber, "Anomaly Detection in Scratch Assignments" In International Conference on Software Engineering: Companion Proceedings (ICSE-Companion), 2021. [Download pre-print version](https://arxiv.org/abs/2103.08261).
+- Nina Körber, Katharina Geldreich, Andreas Stahlbauer, and Gordon Fraser, “Finding Anomalies in Scratch Assignments” In International Conference on Software Engineering: Software Engineering Education and Training Track (ICSE-SEET), 2021. [Download pre-print version](https://arxiv.org/abs/2102.07446)
+
+## Theses
+- Nina Körber. “Anomaly Detection in Scratch: Patterns and Their Violations”. Bachelor's Thesis. University of Passau, 2020. [Download](https://drive.google.com/file/d/1AhaqG3FeC4z1fOPT5DjsSiOlDTzveo1j/view)
 
 # How to Mine Patterns and Anomalies
 ## Script Model Generation
